@@ -1,0 +1,57 @@
+---
+title:      "用python爬虫抓取知乎图片"
+description:   "表情包打包放送"
+date:       2015-09-28 12:00:00
+author:     "安地"
+tags:
+    - Python
+---
+
+
+##	原因
+最近在学习python，可以做一些好玩的事情。
+
+知乎上<http://www.zhihu.com/question/35874887>这个答案分享了1000+图片,都是华丽的表情图片，也是蛮拼，网页打开都卡死，正好做示范抓取图片使用
+
+## 源码
+
+	import urllib.request as request
+    import urllib.parse as parse
+    import string
+    import re
+    import os
+    import urllib.error as error
+
+    def baidu_zhihu(url):
+            #     print('正在下载第'+str(i)+'个页面, 并保存为'+sName)
+    count=0
+    m = request.urlopen(url).read()
+
+    #创建目录保存每个网页上的图片
+            dirpath = 'C:/Users/Administrator/Desktop/python_data/'
+    dirname = 'question/35874887'
+    new_path = os.path.join(dirpath, dirname)
+            if not os.path.isdir(new_path):
+            os.makedirs(new_path)
+    page_data = m.decode('gbk','ignore')
+    print (page_data)
+    page_image = re.compile('<img src=\"(.+?)\"')
+            for image in page_image.findall(page_data):
+    pattern = re.compile(r'^https://.*.jpg$')
+            #         print (image)
+    if  pattern.match(image):
+    print (image)
+    try:
+    image_data = request.urlopen(image).read()
+    image_path = dirpath + dirname +'/'+str(count)+'.jpg'
+    count += 1
+    print(image_path)
+    with open(image_path, 'wb') as image_file:
+            image_file.write(image_data)
+            image_file.close()
+    except error.URLError as e:
+    print('Download failed')
+    if __name__ == "__main__":
+    url = "http://www.zhihu.com/question/35874887"
+
+    baidu_zhihu(url)

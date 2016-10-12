@@ -1,0 +1,184 @@
+---
+layout:     post
+title:      "Android上实现多个辅助服务"
+description:   "用代理转发的方式实现"
+date:       2015-12-31 12:00:00
+author:     "安地"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - Android
+---
+
+
+
+##  正文
+
+辅助服务一个应用只能对应一个，最近应用上加一个辅助服务，原来的代码又不能改，就自己做假的多个辅助服务了。
+自己写同样的服务接口，实现后，注册到一个公共的辅助服务上，就感觉可以实现多个辅助服务了。
+
+自定义辅助服务的接口，主要就这几个方法了。
+
+	/**
+ 	* Created by AndyMao on 2015/12/15.
+ 	*/
+	public interface IAccess {
+
+    void onAccessibilityEvent(final AccessibilityEvent event,Context context);
+
+    void onServiceConnected();
+
+    void onInterrupt();
+
+    boolean onUnbind(Intent intent);
+
+    void onCreate();
+
+    void onDestroy();
+	}
+
+
+一个空的实现如下，用了单例。 
+
+	/**
+     * Created by AndyMao on 2015/12/15.
+     */
+    public class CommonAccess implements IAccess {
+        @Override
+        public void onAccessibilityEvent(AccessibilityEvent event,Context context) {
+
+        }
+
+        @Override
+        public void onServiceConnected() {
+
+        }
+
+        @Override
+        public void onInterrupt() {
+
+        }
+
+        @Override
+        public boolean onUnbind(Intent intent) {
+            return false;
+        }
+
+        @Override
+        public void onCreate() {
+
+        }
+
+        @Override
+        public void onDestroy() {
+
+        }
+    }
+
+真正的服务辅助在这里，主要就是在各个方法上回调已注册的自定义服务的对应方法。要注意的是同步各个方法，主要是注册和回调同时执行的话，就会报错了，虽然概率比较小。
+
+	/**
+     * Created by AndyMao on 2015/12/15.
+     */
+    public class CommonAccessibilityService extends AccessibilityService {
+
+        private static List<IAccess> sAccessList = new ArrayList<>();
+        private static Integer sLockAccessList = new Integer(0);
+
+
+        public static void registerAccessibilityService(IAccess iAccess) {
+            synchronized (sLockAccessList) {
+                if (iAccess != null) {
+                    sAccessList.add(iAccess);
+                }
+            }
+        }
+
+        @Override
+        public void onAccessibilityEvent(final AccessibilityEvent event) {
+            synchronized (sLockAccessList) {
+                for (IAccess access : sAccessList) {
+                    access.onAccessibilityEvent(event, getApplicationContext());
+                }
+            }
+        }
+
+        @Override
+        protected void onServiceConnected() {
+            synchronized (sLockAccessList) {
+                for (IAccess access : sAccessList) {
+                    access.onServiceConnected();
+                }
+            }
+        }
+
+        @Override
+        public void onInterrupt() {
+            synchronized (sLockAccessList) {
+                for (IAccess access : sAccessList) {
+                    access.onInterrupt();
+                }
+            }
+        }
+
+        @Override
+        public boolean onUnbind(Intent intent) {
+            synchronized (sLockAccessList) {
+                for (IAccess access : sAccessList) {
+                    access.onUnbind(intent);
+                }
+            }
+
+            return super.onUnbind(intent);
+        }
+
+        @Override
+        public void onCreate() {
+            super.onCreate();
+
+            synchronized (sLockAccessList) {
+                for (IAccess access : sAccessList) {
+                    access.onCreate();
+                }
+            }
+        }
+
+        @Override
+        public void onDestroy() {
+            super.onDestroy();
+
+            synchronized (sLockAccessList) {
+                for (IAccess access : sAccessList) {
+                    access.onDestroy();
+                }
+            }
+        }
+    }
+辅助服务的xml注册：
+
+   	<service android:name=".accessibility.CommonAccessibilityService"
+            android:enabled="@bool/atLeastIceCreamSandwich"
+             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_config" />
+      </service>
+xml配置如下：
+
+	 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"</span>
+    android:accessibilityEventTypes="typeAllMask"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/accessibility_tips"
+    android:notificationTimeout="100" />
+
+自定义的辅助服务就在代码中静态注册就行了：
+CommonAccessibilityService.registerAccessibilityService(MyAccessibilityService.getInstance());
+
+这样就实现了一个变多个了。
+
+
+
+

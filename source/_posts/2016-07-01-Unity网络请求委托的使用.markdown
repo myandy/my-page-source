@@ -1,0 +1,65 @@
+---
+layout:     post
+title:      "Unity网络请求中委托的使用"
+description:   "初次写Unity的代码"
+date:       2016-07-01 15:21:00
+author:     "安地"
+header-img: "img/post-bg-2016.jpg"
+tags:
+    - Unity
+---
+
+## 前言
+
+unity一般使用C#比较多，我们项目也是如此，C#还是在学校使用过的，unity从没有接触过。
+现在有需要在unity中写一些http请求，就网上找点方法简单实现了，但有个小问题，C#中没有回调，不能把方法作为方法的参数，对于习惯用java的我来说就很蛋疼了，不能回调出去网络请求代码就要写到调用者那，不能单独抽离，耦合比较高，但发现C#有个机制叫委托可以替代函数回调，就决定使用这个了。
+
+## 网络请求类实现
+    using UnityEngine;
+    using LitJson;
+    using System.Collections.Generic;
+    using System.Collections;
+
+
+    public class Request {
+        public const
+        string BASE_URL = "http://xx.com/";
+
+        public delegate
+
+        void OnVrContentReady(VRContentResult<VRContent> result);
+
+        public IEnumerator GetVRContent(string type, int page, int pagesize, OnVrContentReady onReady) {
+            string url = BASE_URL + "android/list?page=" + page + "&pagesize=" + pagesize;
+            if (type != "")
+                url = url + "&type=" + type;
+
+            WWW w = new WWW(url);
+            while (!w.isDone) {
+                yield return new WaitForEndOfFrame();
+            }
+
+            VRContentResult<VRContent> j = JsonMapper.ToObject < VRContentResult < VRContent >> (w.text);
+            onReady(j);
+        }
+    }
+    
+unity中写个网络请求真的非常简单，几行代码就搞定了，json解析用的litJson也容易。其中定义了一个委托，就是一个普通方法，调用请求方法时需要带一个委托，方法执行完成后执行委托方法onReady(j),其实就是java中的方法回调。
+## 调用过程
+
+其他同事调用我的网络请求就很简单了。
+
+调用位置：
+
+	Request request = new Request();
+	StartCoroutine(request.GetVRContent (Tools.TYPE_GAME, 1, net_count,OnMainContentReady));
+
+其中需定义一个执行委托的方法：
+
+    void OnMainContentReady(VRContentResult<VRContent> result)
+	{
+	   //do whatever you want
+	}
+	
+## 感受
+除了委托有点蛋疼，unity中写代码比android中简单太多了。

@@ -1,0 +1,162 @@
+---
+title:      "带动画的自定义view——做一个移动的箭头"
+description: "Android 帧动画 自定义View刷新动画"
+date:       2016-01-09 12:00:00
+author:     "安地"
+tags:
+    - Android
+---
+
+
+##  需求
+
+ 有一个需求是做一个移动的箭头，循环往复向上移动的效果。
+
+## 帧动画实现
+一开始想到帧动画，让设计切好图，定好时间就ok了。代码很简单：
+  	
+    image.setImageResource(R.drawable.animal_totop);
+    AnimationDrawable animationDrawable = (AnimationDrawable) image.getDrawable();
+    animationDrawable.start();
+    
+
+获取到AnimationDrawable，然后start就可以了。动画是这样写的：
+
+	<?xml version="1.0" encoding="utf-8"?><!--
+	根标签为animation-list，其中oneshot代表着是否只展示一遍，设置为false会不停的循环播放动画
+	根标签下，通过item标签对动画中的每一个图片进行声明
+	android:duration 表示展示所用的该图片的时间长度
+ 	-->
+	<animation-list xmlns:android="http://schemas.android.com/apk/res/android"
+    android:oneshot="false">
+
+    <item
+        android:drawable="@drawable/totop1"
+        android:duration="200"></item>
+
+    <item
+        android:drawable="@drawable/totop2"
+        android:duration="200"></item>
+
+    <item
+        android:drawable="@drawable/totop3"
+        android:duration="200"></item>
+
+    <item
+        android:drawable="@drawable/totop4"
+        android:duration="200"></item>
+
+    <item
+        android:drawable="@drawable/totop5"
+        android:duration="200"></item>
+
+    <item
+        android:duration="2000"
+        android:drawable="@color/transparent">
+    </item>
+
+	</animation-list>
+
+
+五张图片，每张展示200ms，然后空白2000ms，设置oneShot为false，就是会循环不停的播放。
+
+##  自定义View实现
+
+发现效果有点差，5帧的动画，当然啦。就想可以自定义View，让其移动并设置透明度，移动就是在onDraw时绘制不同的位置即可了。
+
+ 	import android.content.Context;
+    import android.graphics.Canvas;
+    import android.graphics.Rect;
+    import android.graphics.drawable.Drawable;
+    import android.os.SystemClock;
+    import android.util.AttributeSet;
+    import android.view.View;
+
+    import com.mgyun.lockscreen.R;
+
+    /**
+     * @author AndyMao
+     *         锁屏提示上滑箭头
+     */
+
+    public class ArrowMoveView extends View {
+        private int ballWidth;
+
+        private int ballHeight;
+
+        public ArrowMoveView(Context context) {
+            super(context);
+            init();
+
+        }
+
+        public ArrowMoveView(Context context, AttributeSet attrs) {
+            super(context, attrs);
+            init();
+        }
+
+
+        private float density;
+
+
+        private Drawable drawable;
+
+        private void init() {
+            density = getResources().getDisplayMetrics().density;
+            ballWidth = (int) (20 * density);
+            ballHeight = (int) (30 * density);
+            beginTime = SystemClock.elapsedRealtime();
+
+            drawable = getResources().getDrawable(R.drawable.arrow);
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            setMeasuredDimension((int) (ballWidth), (int) (ballHeight));
+        }
+
+
+        private long beginTime;
+
+        private int duation = 3000;
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            int w = getWidth();
+            int h = getHeight();
+            long time = SystemClock.elapsedRealtime();
+            int delta = (int) ((time - beginTime) % duation);
+
+
+            float percent = delta * 1f / duation;
+
+            for (int i = 0; i < 3; i++) {
+                int height = (int) (i * density * 9 - percent * 3 * h + h);
+
+                Rect rect = new Rect(0, height, getWidth(), height + getWidth());
+                drawable.setBounds(rect);
+                int mid = (h - w / 2) / 2;
+                int alpha = 255 - (int) Math.abs((1.0f * (height - mid) * 2 / (h + w / 2)) * 255);
+
+                if (alpha > 255) {
+                    alpha = 255;
+                }
+                if (alpha < 0) {
+                    alpha = 0;
+                }
+                drawable.setAlpha(alpha);
+                drawable.draw(canvas);
+
+            }
+
+            postInvalidateDelayed(50);
+        }
+
+    }
+
+就重写了onMeasure()和 onDraw(), onDraw最后注意一个延迟刷新方法，postInvalidateDelayed()。
+自己绘制要控制好周期，位置，和透明度，这里图片是一个箭头，自己绘制了三次，因为要控制每一个的透明度。这些算的还算简单，自己在本子上画画调整下就可以了。
+这种实现连贯性就比帧动画好多了，也节省资源，省去多张图片。以后有相关需求一定要先想自己实现，不能太依赖设计直接给完整图。
+
+
