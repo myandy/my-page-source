@@ -2,90 +2,287 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="d8d7aa5e-77f9-4ba4-a70b-b4e65939b18e" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/source/_posts/opengl滤镜原理及实现.markdown" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/.gitignore" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/Gruntfile.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/LICENSE" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/README.md" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/_config.yml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/languages/default.yml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/languages/fr.yml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/languages/nl.yml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/languages/no.yml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/languages/ru.yml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/languages/zh-CN.yml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/languages/zh-TW.yml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/after-footer.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/archive-post.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/archive.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/article.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/footer.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/google-analytics.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/head.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/header.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/mobile-nav.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/post/category.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/post/date.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/post/gallery.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/post/nav.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/post/tag.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/post/title.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_partial/sidebar.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_widget/archive.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_widget/category.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_widget/recent_posts.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_widget/tag.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/_widget/tagcloud.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/archive.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/category.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/index.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/layout.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/page.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/post.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/layout/tag.ejs" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/package.json" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/scripts/fancybox.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/_extend.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/_partial/archive.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/_partial/article.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/_partial/comment.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/_partial/footer.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/_partial/header.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/_partial/highlight.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/_partial/mobile.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/_partial/sidebar-aside.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/_partial/sidebar-bottom.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/_partial/sidebar.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/_util/grid.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/_util/mixin.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/_variables.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/fonts/FontAwesome.otf" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/fonts/fontawesome-webfont.eot" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/fonts/fontawesome-webfont.svg" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/fonts/fontawesome-webfont.ttf" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/fonts/fontawesome-webfont.woff" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/images/banner.jpg" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/css/style.styl" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/blank.gif" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/fancybox_loading.gif" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/fancybox_loading@2x.gif" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/fancybox_overlay.png" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/fancybox_sprite.png" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/fancybox_sprite@2x.png" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/helpers/fancybox_buttons.png" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/helpers/jquery.fancybox-buttons.css" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/helpers/jquery.fancybox-buttons.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/helpers/jquery.fancybox-media.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/helpers/jquery.fancybox-thumbs.css" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/helpers/jquery.fancybox-thumbs.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/jquery.fancybox.css" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/jquery.fancybox.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/fancybox/jquery.fancybox.pack.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/themes/landscape/source/js/script.js" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/source/img/post_sd_1.jpg" afterPath="$PROJECT_DIR$/source/img/post_sd_1.jpg" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/themes/yelee" afterPath="$PROJECT_DIR$/themes/yelee" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/package.json" afterPath="$PROJECT_DIR$/package.json" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/LICENSE" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/README.en.md" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/README.md" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/_config.yml" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/bower.json" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/gulpfile.coffee" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/languages/de.yml" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/languages/default.yml" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/languages/en.yml" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/languages/fr-FR.yml" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/languages/id.yml" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/languages/ja.yml" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/languages/ko.yml" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/languages/pt-BR.yml" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/languages/pt.yml" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/languages/ru.yml" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/languages/zh-Hans.yml" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/languages/zh-hk.yml" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/languages/zh-tw.yml" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_custom/header.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_custom/sidebar.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_layout.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_macro/post-collapse.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_macro/post-copyright.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_macro/post.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_macro/reward.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_macro/sidebar.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_macro/wechat-subscriber.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/comments.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/footer.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/head.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/head/custom-head.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/head/external-fonts.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/header.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/page-header.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/pagination.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/search.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/search/localsearch.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/search/swiftype.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/search/tinysou.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/share/add-this.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/share/baidushare.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/share/duoshuo_share.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_partials/share/jiathis.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_scripts/boostrap.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_scripts/commons.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_scripts/pages/post-details.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_scripts/schemes/mist.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_scripts/schemes/muse.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_scripts/schemes/pisces.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_scripts/vendors.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/analytics/application-insights.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/analytics/baidu-analytics.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/analytics/busuanzi-counter.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/analytics/cnzz-analytics.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/analytics/facebook-sdk.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/analytics/google-analytics.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/analytics/index.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/analytics/lean-analytics.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/analytics/tencent-analytics.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/analytics/tencent-mta.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/analytics/vkontakte-api.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/comments/changyan.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/comments/disqus.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/comments/duoshuo.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/comments/gentie.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/comments/hypercomments.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/comments/index.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/comments/livere.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/comments/youyan.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/duoshuo-hot-articles.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/exturl.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/mathjax.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/schedule.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/search/algolia-search/assets.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/search/algolia-search/dom.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/search/index.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/search/localsearch.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/search/tinysou.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/_third-party/seo/baidu-push.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/archive.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/category.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/index.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/page.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/post.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/schedule.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/layout/tag.swig" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/package.json" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/scripts/merge-configs.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/scripts/merge.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/scripts/tags/button.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/scripts/tags/center-quote.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/scripts/tags/exturl.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/scripts/tags/full-image.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/scripts/tags/group-pictures.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/scripts/tags/note.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/404.html" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/back-to-top-sidebar.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/back-to-top.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/buttons.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/comments.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/components.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/footer/footer.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/header/header.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/header/headerband.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/header/menu.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/header/site-meta.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/header/site-nav.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/highlight/diff.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/highlight/highlight.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/highlight/theme.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/pages/archive.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/pages/categories.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/pages/pages.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/pages/post-detail.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/pages/schedule.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/pagination.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/post/post-button.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/post/post-collapse.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/post/post-copyright.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/post/post-eof.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/post/post-expand.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/post/post-gallery.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/post/post-meta.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/post/post-nav.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/post/post-reward.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/post/post-tags.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/post/post-title.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/post/post-type.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/post/post.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/sidebar/sidebar-author-links.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/sidebar/sidebar-author.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/sidebar/sidebar-blogroll.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/sidebar/sidebar-feed-link.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/sidebar/sidebar-nav.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/sidebar/sidebar-toc.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/sidebar/sidebar-toggle.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/sidebar/sidebar.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/sidebar/site-state.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/tag-cloud.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/tags/blockquote-center.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/tags/exturl.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/tags/full-image.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/tags/group-pictures.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/tags/note.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/tags/tags.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/third-party/algolia-search.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/third-party/baidushare.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/third-party/busuanzi-counter.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/third-party/duoshuo.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/third-party/gentie.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/third-party/jiathis.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/third-party/localsearch.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/components/third-party/third-party.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/outline/outline.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/scaffolding/base.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/scaffolding/helpers.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/scaffolding/normalize.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/scaffolding/scaffolding.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_common/scaffolding/tables.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_custom/custom.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_mixins/Mist.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_mixins/Muse.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_mixins/Pisces.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_mixins/base.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_mixins/custom.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Mist/_base.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Mist/_header.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Mist/_logo.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Mist/_menu.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Mist/_posts-expanded.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Mist/_search.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Mist/index.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Mist/outline/outline.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Mist/sidebar/sidebar-blogroll.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Muse/_layout.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Muse/_logo.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Muse/_menu.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Muse/_search.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Muse/index.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Muse/sidebar/sidebar-blogroll.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Pisces/_brand.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Pisces/_layout.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Pisces/_menu.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Pisces/_posts.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Pisces/_sidebar.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_schemes/Pisces/index.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_variables/Mist.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_variables/Muse.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_variables/Pisces.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_variables/base.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/_variables/custom.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/css/main.styl" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/fonts/.gitkeep" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/images/algolia_logo.svg" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/images/avatar.gif" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/images/cc-by-nc-nd.svg" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/images/cc-by-nc-sa.svg" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/images/cc-by-nc.svg" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/images/cc-by-nd.svg" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/images/cc-by-sa.svg" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/images/cc-by.svg" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/images/cc-zero.svg" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/images/loading.gif" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/images/placeholder.gif" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/images/quote-l.svg" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/images/quote-r.svg" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/images/searchicon.png" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/js/src/affix.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/js/src/algolia-search.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/js/src/bootstrap.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/js/src/exturl.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/js/src/hook-duoshuo.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/js/src/motion.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/js/src/post-details.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/js/src/schemes/pisces.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/js/src/scrollspy.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/js/src/utils.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/algolia-instant-search/instantsearch.min.css" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/algolia-instant-search/instantsearch.min.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/canvas-nest/canvas-nest.min.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/blank.gif" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/fancybox_loading.gif" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/fancybox_loading@2x.gif" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/fancybox_overlay.png" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/fancybox_sprite.png" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/fancybox_sprite@2x.png" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/helpers/fancybox_buttons.png" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/helpers/jquery.fancybox-buttons.css" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/helpers/jquery.fancybox-buttons.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/helpers/jquery.fancybox-media.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/helpers/jquery.fancybox-thumbs.css" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/helpers/jquery.fancybox-thumbs.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/jquery.fancybox.css" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/jquery.fancybox.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fancybox/source/jquery.fancybox.pack.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fastclick/.bower.json" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fastclick/LICENSE" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fastclick/README.md" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fastclick/bower.json" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fastclick/lib/fastclick.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/fastclick/lib/fastclick.min.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/font-awesome/.bower.json" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/font-awesome/.gitignore" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/font-awesome/.npmignore" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/font-awesome/HELP-US-OUT.txt" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/font-awesome/bower.json" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/font-awesome/css/font-awesome.css" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/font-awesome/css/font-awesome.css.map" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/font-awesome/css/font-awesome.min.css" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/font-awesome/fonts/FontAwesome.otf" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/font-awesome/fonts/fontawesome-webfont.eot" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/font-awesome/fonts/fontawesome-webfont.svg" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/font-awesome/fonts/fontawesome-webfont.ttf" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/font-awesome/fonts/fontawesome-webfont.woff" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/font-awesome/fonts/fontawesome-webfont.woff2" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/jquery/.bower.json" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/jquery/index.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/jquery_lazyload/.bower.json" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/jquery_lazyload/CONTRIBUTING.md" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/jquery_lazyload/README.md" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/jquery_lazyload/bower.json" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/jquery_lazyload/jquery.lazyload.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/jquery_lazyload/jquery.scrollstop.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/three/three-waves.min.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/three/three.min.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/ua-parser-js/dist/ua-parser.min.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/ua-parser-js/dist/ua-parser.pack.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/velocity/.bower.json" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/velocity/bower.json" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/velocity/velocity.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/velocity/velocity.min.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/velocity/velocity.ui.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/source/lib/velocity/velocity.ui.min.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/test/.jshintrc" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/test/helpers.js" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/themes/next/test/intern.js" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" afterPath="$PROJECT_DIR$/.gitignore" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" afterPath="$PROJECT_DIR$/.idea/misc.xml" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change beforePath="$PROJECT_DIR$/themes/yelee" afterPath="$PROJECT_DIR$/themes/yelee" />
     </list>
     <ignored path="Hexo.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -96,112 +293,55 @@
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ChangesViewManager" flattened_view="true" show_ignored="false" />
   <component name="CreatePatchCommitExecutor">
     <option name="PATCH_PATH" value="" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
   <component name="FavoritesManager">
     <favorites_list name="Hexo" />
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="Android中VR播放方式及实现分析.markdown" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/source/_posts/Android中VR播放方式及实现分析.markdown">
+      <file leaf-file-name="_config.yml" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/_config.yml">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="0">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="README.md" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/themes/yelee/README.md">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-3336">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="2016-07-01-Unity与Android的互相调用.markdown" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/source/_posts/2016-07-01-Unity与Android的互相调用.markdown">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="0">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="2016-07-01-Unity网络请求委托的使用.markdown" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/source/_posts/2016-07-01-Unity网络请求委托的使用.markdown">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="0">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="package.json" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/themes/yelee/package.json">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="0">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="_config.yml" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/themes/yelee/_config.yml">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="342">
-              <caret line="19" column="24" selection-start-line="19" selection-start-column="24" selection-end-line="19" selection-end-column="24" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="CNAME" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/source/CNAME">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="0">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+            <state relative-caret-position="774">
+              <caret line="43" column="14" lean-forward="false" selection-start-line="43" selection-start-column="14" selection-end-line="43" selection-end-column="14" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
       <file leaf-file-name="_config.yml" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/_config.yml">
+        <entry file="file://$PROJECT_DIR$/themes/next/_config.yml">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="288">
-              <caret line="16" column="36" selection-start-line="16" selection-start-column="36" selection-end-line="16" selection-end-column="36" />
+            <state relative-caret-position="90">
+              <caret line="5" column="21" lean-forward="false" selection-start-line="5" selection-start-column="9" selection-end-line="5" selection-end-column="21" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="opengl滤镜原理及实现.markdown" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/source/_posts/opengl滤镜原理及实现.markdown">
+      <file leaf-file-name=".gitignore" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/.gitignore">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="480">
-              <caret line="99" column="6" selection-start-line="99" selection-start-column="6" selection-end-line="99" selection-end-column="6" />
+            <state relative-caret-position="144">
+              <caret line="8" column="0" lean-forward="false" selection-start-line="8" selection-start-column="0" selection-end-line="8" selection-end-column="0" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name=".gitignore" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/themes/yelee/.gitignore">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="0">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-              <folding />
+      <file leaf-file-name="2015-12-31-Android多个辅助服务.markdown" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/source/_posts/2015-12-31-Android多个辅助服务.markdown">
+          <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
+            <state split_layout="SPLIT">
+              <first_editor relative-caret-position="0">
+                <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+                <folding />
+              </first_editor>
+              <second_editor>
+                <markdownNavigatorState />
+              </second_editor>
             </state>
           </provider>
         </entry>
@@ -239,24 +379,18 @@
         <option value="$PROJECT_DIR$/_config.yml" />
         <option value="$PROJECT_DIR$/source/_posts/opengl滤镜原理及实现.markdown" />
         <option value="$PROJECT_DIR$/themes/yelee/_config.yml" />
+        <option value="$PROJECT_DIR$/.gitignore" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="1985" />
-    <option name="y" value="-4" />
+    <option name="x" value="65" />
+    <option name="y" value="24" />
     <option name="width" value="1855" />
-    <option name="height" value="1084" />
+    <option name="height" value="1056" />
   </component>
-  <component name="ProjectLevelVcsManager" settingsEditedManually="false">
-    <OptionsSetting value="true" id="Add" />
-    <OptionsSetting value="true" id="Remove" />
-    <OptionsSetting value="true" id="Checkout" />
-    <OptionsSetting value="true" id="Update" />
-    <OptionsSetting value="true" id="Status" />
-    <OptionsSetting value="true" id="Edit" />
+  <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="2" id="Add" />
-    <ConfirmationsSetting value="0" id="Remove" />
   </component>
   <component name="ProjectView">
     <navigator currentView="ProjectPane" proportions="" version="1">
@@ -273,132 +407,37 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="AndroidView">
-        <subPane />
-      </pane>
-      <pane id="Scope" />
+      <pane id="AndroidView" />
       <pane id="ProjectPane">
         <subPane>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="themes" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="yelee" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="source" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="source" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="img" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="source" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="about" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="public" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="my-hexo-page" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="public" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="img" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
+          <expand>
+            <path>
+              <item name="my-hexo-page" type="b2602c69:ProjectViewProjectNode" />
+              <item name="my-hexo-page" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="my-hexo-page" type="b2602c69:ProjectViewProjectNode" />
+              <item name="my-hexo-page" type="462c0819:PsiDirectoryNode" />
+              <item name="source" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="my-hexo-page" type="b2602c69:ProjectViewProjectNode" />
+              <item name="my-hexo-page" type="462c0819:PsiDirectoryNode" />
+              <item name="source" type="462c0819:PsiDirectoryNode" />
+              <item name="img" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="my-hexo-page" type="b2602c69:ProjectViewProjectNode" />
+              <item name="my-hexo-page" type="462c0819:PsiDirectoryNode" />
+              <item name="themes" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
         </subPane>
       </pane>
-      <pane id="PackagesPane" />
       <pane id="Scratches" />
+      <pane id="Scope" />
+      <pane id="PackagesPane" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -406,8 +445,13 @@
     <property name="settings.editor.splitter.proportion" value="0.2" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="SearchEverywhereHistoryKey" value="favicon&#9;FILE&#9;file://C:/Hexo/node_modules/hexo/lib/plugins/helper/favicon_tag.js" />
+    <property name="com.android.tools.idea.instantapp.provision.ProvisionBeforeRunTaskProvider.myTimeStamp" value="1526015230773" />
   </component>
   <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Hexo\source" />
+      <recent name="C:\Hexo\themes\yelee\source\img" />
+    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/themes/yelee/source/img" />
       <recent name="$PROJECT_DIR$/source/img" />
@@ -415,12 +459,68 @@
       <recent name="C:\Hexo\source\_posts" />
       <recent name="C:\Hexo\source\img" />
     </key>
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Hexo\source" />
-      <recent name="C:\Hexo\themes\yelee\source\img" />
-    </key>
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
   </component>
   <component name="RunManager">
+    <configuration default="true" type="Application" factoryName="Application">
+      <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
+      <option name="MAIN_CLASS_NAME" />
+      <option name="VM_PARAMETERS" />
+      <option name="PROGRAM_PARAMETERS" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+      <option name="ALTERNATIVE_JRE_PATH" />
+      <option name="ENABLE_SWING_INSPECTOR" value="false" />
+      <option name="ENV_VARIABLES" />
+      <option name="PASS_PARENT_ENVS" value="true" />
+      <module name="" />
+      <envs />
+    </configuration>
+    <configuration default="true" type="Remote" factoryName="Remote">
+      <option name="USE_SOCKET_TRANSPORT" value="true" />
+      <option name="SERVER_MODE" value="false" />
+      <option name="SHMEM_ADDRESS" value="javadebug" />
+      <option name="HOST" value="localhost" />
+      <option name="PORT" value="5005" />
+    </configuration>
+    <configuration default="true" type="TestNG" factoryName="TestNG">
+      <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
+      <module name="" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+      <option name="ALTERNATIVE_JRE_PATH" />
+      <option name="SUITE_NAME" />
+      <option name="PACKAGE_NAME" />
+      <option name="MAIN_CLASS_NAME" />
+      <option name="METHOD_NAME" />
+      <option name="GROUP_NAME" />
+      <option name="TEST_OBJECT" value="CLASS" />
+      <option name="VM_PARAMETERS" value="-ea" />
+      <option name="PARAMETERS" />
+      <option name="WORKING_DIRECTORY" value="$MODULE_DIR$" />
+      <option name="OUTPUT_DIRECTORY" />
+      <option name="ANNOTATION_TYPE" />
+      <option name="ENV_VARIABLES" />
+      <option name="PASS_PARENT_ENVS" value="true" />
+      <option name="TEST_SEARCH_SCOPE">
+        <value defaultName="singleModule" />
+      </option>
+      <option name="USE_DEFAULT_REPORTERS" value="false" />
+      <option name="PROPERTIES_FILE" />
+      <envs />
+      <properties />
+      <listeners />
+    </configuration>
     <configuration default="true" type="AndroidRunConfigurationType" factoryName="Android App">
       <module name="" />
       <option name="DEPLOY" value="true" />
@@ -510,20 +610,14 @@
       </Profilers>
       <method />
     </configuration>
-    <configuration default="true" type="Application" factoryName="Application">
-      <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
+    <configuration name="&lt;template&gt;" type="Applet" default="true" selected="false">
       <option name="MAIN_CLASS_NAME" />
+      <option name="HTML_FILE_NAME" />
+      <option name="HTML_USED" value="false" />
+      <option name="WIDTH" value="400" />
+      <option name="HEIGHT" value="300" />
+      <option name="POLICY_FILE" value="$APPLICATION_HOME_DIR$/bin/appletviewer.policy" />
       <option name="VM_PARAMETERS" />
-      <option name="PROGRAM_PARAMETERS" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
-      <option name="ALTERNATIVE_JRE_PATH" />
-      <option name="ENABLE_SWING_INSPECTOR" value="false" />
-      <option name="ENV_VARIABLES" />
-      <option name="PASS_PARENT_ENVS" value="true" />
-      <module name="" />
-      <envs />
-      <method />
     </configuration>
     <configuration default="true" type="GradleRunConfiguration" factoryName="Gradle">
       <ExternalSystemSettings>
@@ -583,42 +677,6 @@
       <envs />
       <method />
     </configuration>
-    <configuration default="true" type="Remote" factoryName="Remote">
-      <option name="USE_SOCKET_TRANSPORT" value="true" />
-      <option name="SERVER_MODE" value="false" />
-      <option name="SHMEM_ADDRESS" value="javadebug" />
-      <option name="HOST" value="localhost" />
-      <option name="PORT" value="5005" />
-      <method />
-    </configuration>
-    <configuration default="true" type="TestNG" factoryName="TestNG">
-      <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
-      <module name="" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
-      <option name="ALTERNATIVE_JRE_PATH" />
-      <option name="SUITE_NAME" />
-      <option name="PACKAGE_NAME" />
-      <option name="MAIN_CLASS_NAME" />
-      <option name="METHOD_NAME" />
-      <option name="GROUP_NAME" />
-      <option name="TEST_OBJECT" value="CLASS" />
-      <option name="VM_PARAMETERS" value="-ea" />
-      <option name="PARAMETERS" />
-      <option name="WORKING_DIRECTORY" value="$MODULE_DIR$" />
-      <option name="OUTPUT_DIRECTORY" />
-      <option name="ANNOTATION_TYPE" />
-      <option name="ENV_VARIABLES" />
-      <option name="PASS_PARENT_ENVS" value="true" />
-      <option name="TEST_SEARCH_SCOPE">
-        <value defaultName="singleModule" />
-      </option>
-      <option name="USE_DEFAULT_REPORTERS" value="false" />
-      <option name="PROPERTIES_FILE" />
-      <envs />
-      <properties />
-      <listeners />
-      <method />
-    </configuration>
     <configuration default="true" type="TestNGTestDiscovery" factoryName="TestNG Test Discovery" changeList="All">
       <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
       <module name="" />
@@ -647,15 +705,6 @@
       <listeners />
       <method />
     </configuration>
-    <configuration name="&lt;template&gt;" type="Applet" default="true" selected="false">
-      <option name="MAIN_CLASS_NAME" />
-      <option name="HTML_FILE_NAME" />
-      <option name="HTML_USED" value="false" />
-      <option name="WIDTH" value="400" />
-      <option name="HEIGHT" value="300" />
-      <option name="POLICY_FILE" value="$APPLICATION_HOME_DIR$/bin/appletviewer.policy" />
-      <option name="VM_PARAMETERS" />
-    </configuration>
     <configuration name="&lt;template&gt;" type="#org.jetbrains.idea.devkit.run.PluginConfigurationType" default="true" selected="false">
       <option name="VM_PARAMETERS" value="-Xmx512m -Xms256m -XX:MaxPermSize=250m -ea" />
     </configuration>
@@ -677,39 +726,39 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="1985" y="-4" width="1855" height="1084" extended-state="6" />
-    <editor active="true" />
+    <frame x="65" y="24" width="1855" height="1056" extended-state="0" />
     <layout>
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
-      <window_info id="Nl-Palette" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Palette&#9;" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Image Layers" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Capture Analysis" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Properties" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Capture Tool" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Designer" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.23114754" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.048596114" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.23114754" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Theme Preview" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="true" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="Nl-Palette" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Build Variants" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="true" content_ui="tabs" />
       <window_info id="Android Monitor" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Properties" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Android Model" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="true" content_ui="tabs" />
+      <window_info id="simpleUML" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.008639309" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Captures" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Gradle Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="12" side_tool="true" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.048596114" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Gradle" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
     </layout>
   </component>
@@ -735,37 +784,34 @@
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/source/_posts/2016-07-01-Unity网络请求委托的使用.markdown" />
     <entry file="file://$PROJECT_DIR$/source/_posts/2015-07-30-知乎格子问题.markdown" />
     <entry file="file://$PROJECT_DIR$/source/_posts/2015-09-28-python抓取图片.markdown" />
     <entry file="file://$PROJECT_DIR$/source/_posts/2015-07-30-知乎格子问题.markdown" />
     <entry file="file://$PROJECT_DIR$/source/_posts/2015-07-30-知乎格子问题.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/source/_posts/2015-09-28-python抓取图片.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="57">
-          <caret line="3" column="16" selection-start-line="3" selection-start-column="16" selection-end-line="3" selection-end-column="16" />
-          <folding />
+          <caret line="3" column="16" lean-forward="false" selection-start-line="3" selection-start-column="16" selection-end-line="3" selection-end-column="16" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/_config.yml">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/.gitignore">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
@@ -776,7 +822,7 @@
     <entry file="file://$PROJECT_DIR$/package.json">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
@@ -785,7 +831,7 @@
     <entry file="file://$PROJECT_DIR$/source/_posts/2016-01-11-思考死亡.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="266">
-          <caret line="14" column="6" selection-start-line="14" selection-start-column="6" selection-end-line="14" selection-end-column="6" />
+          <caret line="14" column="6" lean-forward="false" selection-start-line="14" selection-start-column="6" selection-end-line="14" selection-end-column="6" />
         </state>
       </provider>
     </entry>
@@ -794,31 +840,28 @@
     <entry file="file://$PROJECT_DIR$/source/_posts/下载进度最流畅单项刷新.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="522">
-          <caret line="29" column="4" selection-start-line="29" selection-start-column="4" selection-end-line="29" selection-end-column="4" />
-          <folding />
+          <caret line="29" column="4" lean-forward="false" selection-start-line="29" selection-start-column="4" selection-end-line="29" selection-end-column="4" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/source/_posts/DayDream Android版视频播放源码浅析.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/source/_posts/2016-03-14-Android平移翻页.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="18">
-          <caret line="3" column="11" selection-start-line="3" selection-start-column="11" selection-end-line="3" selection-end-column="11" />
-          <folding />
+          <caret line="3" column="11" lean-forward="false" selection-start-line="3" selection-start-column="11" selection-end-line="3" selection-end-column="11" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/source/_posts/2016-01-09-Android动画箭头.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="36">
-          <caret line="2" column="11" selection-start-line="2" selection-start-column="0" selection-end-line="2" selection-end-column="11" />
+          <caret line="2" column="11" lean-forward="false" selection-start-line="2" selection-start-column="0" selection-end-line="2" selection-end-column="11" />
           <folding />
         </state>
       </provider>
@@ -826,8 +869,7 @@
     <entry file="file://$PROJECT_DIR$/source/_posts/2015-07-30-知乎格子问题.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
@@ -839,31 +881,39 @@
     <entry file="file://$PROJECT_DIR$/source/_posts/2015-09-28-python抓取图片.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/source/_posts/2015-10-22-外置SD卡文件读写.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="270">
-          <caret line="15" column="0" selection-start-line="15" selection-start-column="0" selection-end-line="15" selection-end-column="31" />
-          <folding />
+          <caret line="15" column="0" lean-forward="false" selection-start-line="15" selection-start-column="0" selection-end-line="15" selection-end-column="31" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/source/_posts/2015-12-31-2015总结.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="108">
-          <caret line="6" column="36" selection-start-line="6" selection-start-column="36" selection-end-line="6" selection-end-column="36" />
-          <folding />
+          <caret line="6" column="36" lean-forward="false" selection-start-line="6" selection-start-column="36" selection-end-line="6" selection-end-column="36" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/source/_posts/2015-12-31-Android多个辅助服务.markdown">
-      <provider selected="true" editor-type-id="text-editor">
+      <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
+        <state split_layout="SPLIT">
+          <first_editor relative-caret-position="0">
+            <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+            <folding />
+          </first_editor>
+          <second_editor>
+            <markdownNavigatorState />
+          </second_editor>
+        </state>
+      </provider>
+      <provider editor-type-id="text-editor">
         <state relative-caret-position="54">
-          <caret line="3" column="11" selection-start-line="3" selection-start-column="0" selection-end-line="3" selection-end-column="11" />
+          <caret line="3" column="11" lean-forward="false" selection-start-line="3" selection-start-column="0" selection-end-line="3" selection-end-column="11" />
           <folding />
         </state>
       </provider>
@@ -871,16 +921,14 @@
     <entry file="file://$PROJECT_DIR$/db.json">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/source/about/index.md">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="162">
-          <caret line="9" column="21" selection-start-line="9" selection-start-column="21" selection-end-line="9" selection-end-column="21" />
-          <folding />
+          <caret line="9" column="21" lean-forward="false" selection-start-line="9" selection-start-column="21" selection-end-line="9" selection-end-column="21" />
         </state>
       </provider>
     </entry>
@@ -897,31 +945,21 @@
     <entry file="file://$PROJECT_DIR$/source/tags/index.md">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/.gitignore">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/package.json">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/themes/yelee/README.md">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-3336">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding />
         </state>
       </provider>
@@ -939,8 +977,7 @@
     <entry file="file://$PROJECT_DIR$/themes/yelee/package.json">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
@@ -959,50 +996,39 @@
         <state />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/themes/landscape/_config.yml">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/themes/landscape/_config.yml" />
     <entry file="file://$PROJECT_DIR$/source/_posts/2016-07-01-Unity与Android的互相调用.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/source/_posts/2016-07-01-Unity网络请求委托的使用.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/source/_posts/Android中VR播放方式及实现分析.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/source/_posts/opengl滤镜原理及实现.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="480">
-          <caret line="99" column="6" selection-start-line="99" selection-start-column="6" selection-end-line="99" selection-end-column="6" />
-          <folding />
+          <caret line="99" column="6" lean-forward="false" selection-start-line="99" selection-start-column="6" selection-end-line="99" selection-end-column="6" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/_config.yml">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="288">
-          <caret line="16" column="36" selection-start-line="16" selection-start-column="36" selection-end-line="16" selection-end-column="36" />
+        <state relative-caret-position="774">
+          <caret line="43" column="14" lean-forward="false" selection-start-line="43" selection-start-column="14" selection-end-line="43" selection-end-column="14" />
           <folding />
         </state>
       </provider>
@@ -1010,23 +1036,31 @@
     <entry file="file://$PROJECT_DIR$/source/CNAME">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/themes/yelee/.gitignore">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/themes/yelee/.gitignore" />
     <entry file="file://$PROJECT_DIR$/themes/yelee/_config.yml">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="342">
-          <caret line="19" column="24" selection-start-line="19" selection-start-column="24" selection-end-line="19" selection-end-column="24" />
+        <state relative-caret-position="1602">
+          <caret line="89" column="0" lean-forward="false" selection-start-line="89" selection-start-column="0" selection-end-line="89" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/themes/next/_config.yml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="90">
+          <caret line="5" column="21" lean-forward="false" selection-start-line="5" selection-start-column="9" selection-end-line="5" selection-end-column="21" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/.gitignore">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="144">
+          <caret line="8" column="0" lean-forward="false" selection-start-line="8" selection-start-column="0" selection-end-line="8" selection-end-column="0" />
           <folding />
         </state>
       </provider>
