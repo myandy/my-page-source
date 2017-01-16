@@ -1,0 +1,369 @@
+---
+layout:     post
+title:      "Android平移翻页"
+description:   "自定义控件及滑动冲突的解决"
+date:       2016-03-14 12:00:00
+author:     "安地"
+tags:
+    - Android
+---
+
+## 实现效果
+
+这篇是整理一年前做的一个诗Shi应用里面的一个翻页控件，效果是这样的（简单截了个翻页时的图）：
+
+![Alt text](/img/post-img-3-14.jpg)
+
+实现的一个向右翻页的一个效果，每一页还能上下滑。
+
+## 翻页的实现
+
+翻页其实只需要三张页面就足够了，分别是当前页，上一页和下一页，每一页都是一个View，用一个自定义布局管理，数据用一个PagerAdapter进行管理。
+
+设置adapter代码：
+
+	public void setAdapter(PagerAdapter adapter, int index)
+    {
+        removeAllViews();
+        this.index = index;
+        this.adapter = adapter;
+        prePage = (View) adapter.instantiateItem(this, index - 1);
+        addView(prePage, 0, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+
+        currPage = (View) adapter.instantiateItem(this, index);
+        addView(currPage, 0, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+
+        nextPage = (View) adapter.instantiateItem(this, index + 1);
+        addView(nextPage, 0, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+
+    }	
+
+计算大小和处理view位置：
+
+ 	@Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec)
+    {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        mWidth = getMeasuredWidth();
+        mHeight = getMeasuredHeight();
+        if (isInit)
+        {
+            // 初始状态，一页放在左边隐藏起来，两页叠在一块
+            prePageLeft = mWidth;
+            currPageLeft = 0;
+            nextPageLeft = 0;
+            isInit = false;
+        }
+    }
+
+    @Override
+    protected void onLayout(boolean changed, int l, int t, int r, int b)
+    {
+        if (adapter == null)
+            return;
+        prePage.layout(prePageLeft, 0, prePageLeft + prePage.getMeasuredWidth(), prePage.getMeasuredHeight());
+        currPage.layout(currPageLeft, 0, currPageLeft + currPage.getMeasuredWidth(), currPage.getMeasuredHeight());
+        nextPage.layout(nextPageLeft, 0, nextPageLeft + nextPage.getMeasuredWidth(), nextPage.getMeasuredHeight());
+        invalidate();
+    }
+
+
+这里都很清晰，按每一页的位置进行绘制，关键是位置如何计算了，在onTouchEvent里面：
+
+
+ 	@Override
+    public boolean onTouchEvent(MotionEvent event)
+    {
+        if (event.getAction() == MotionEvent.ACTION_DOWN && event.getEdgeFlags() != 0)
+        {
+            return false;
+        }
+        if (adapter != null)
+            switch (event.getActionMasked())
+            {
+                case MotionEvent.ACTION_DOWN:
+                    lastX = event.getX();
+                    try
+                    {
+                        if (vt == null)
+                        {
+                            vt = VelocityTracker.obtain();
+                        }
+                        else
+                        {
+                            vt.clear();
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        e.printStackTrace();
+                    }
+                    vt.addMovement(event);
+                    mEvents = 0;
+                    break;
+                case MotionEvent.ACTION_POINTER_DOWN:
+                case MotionEvent.ACTION_POINTER_UP:
+                    mEvents = -1;
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    // 取消动画
+                    quitMove();
+                    vt.addMovement(event);
+                    vt.computeCurrentVelocity(500);
+                    speed = vt.getXVelocity();
+                    moveLenght = event.getX() - lastX;
+                    if ((moveLenght > 0 || !isPreMoving) && isCurrMoving && mEvents == 0)
+                    {
+                        isPreMoving = false;
+                        isCurrMoving = true;
+                        if (index == adapter.getCount())
+                        {
+                            // 最后一页不能再往左翻
+                            state = STATE_STOP;
+                            releaseMoving();
+                        }
+                        else
+                        {
+                            currPageLeft += (int) moveLenght;
+                            // 防止滑过边界
+                            if (currPageLeft > mWidth)
+                                currPageLeft = mWidth;
+                            else if (currPageLeft < 0)
+                            {
+                                // 边界判断，释放动作，防止来回滑动导致滑动前一页时当前页无法滑动
+                                currPageLeft = 0;
+                                releaseMoving();
+                            }
+
+                            right = mWidth + currPageLeft;
+                            state = STATE_MOVE;
+                        }
+                    }
+                    else if ((moveLenght < 0 || !isCurrMoving) && isPreMoving && mEvents == 0)
+                    {
+
+                        isPreMoving = true;
+                        isCurrMoving = false;
+                        if (index == 1)
+                        {
+                            // 第一页不能再往右翻，跳转到前一个activity
+                            state = STATE_MOVE;
+                            releaseMoving();
+                        }
+                        else
+                        {
+                            // 非第一页
+                            prePageLeft += (int) moveLenght;
+                            // 防止滑过边界
+                            if (prePageLeft < 0)
+                                prePageLeft = 0;
+                            else if (prePageLeft > mWidth)
+                            {
+                                // 边界判断，释放动作，防止来回滑动导致滑动当前页是前一页无法滑动
+                                prePageLeft = mWidth;
+                                releaseMoving();
+                            }
+                            right = mWidth + prePageLeft;
+                            state = STATE_MOVE;
+                        }
+
+                    }
+                    else
+                        mEvents = 0;
+                    lastX = event.getX();
+                    requestLayout();
+                    break;
+                case MotionEvent.ACTION_UP:
+                    if (Math.abs(speed) < speed_shake)
+                        speed = 0;
+                    quitMove();
+                    mTask = new MyTimerTask(updateHandler);
+                    timer.schedule(mTask, 0, 5);
+                    break;
+                default:
+                    break;
+            }
+        return true;
+    }
+
+
+这里比较长，还是很多其它处理，比如边界，速度还有停止滑动等，这些都不用管，只看移动位置就行了，只有MotionEvent.ACTION_MOVE里的一些代码。
+先判断是当前页滑动还是上一页滑动，然后记录移动距离及移动状态，最后requestLayout重新布局。
+
+明显上面还少了页面位置的计算，还有一个是页面的切换过程。
+上面事件处理中有个timer：
+
+	 class MyTimerTask extends TimerTask
+    {
+        Handler handler;
+
+        public MyTimerTask(Handler handler)
+        {
+            this.handler = handler;
+        }
+
+        @Override
+        public void run()
+        {
+            handler.sendMessage(handler.obtainMessage());
+        }
+
+    }
+一直在发送消息处理到handler中，hander代码如下：
+
+	 Handler updateHandler = new Handler()
+    {
+
+        @Override
+        public void handleMessage(Message msg)
+        {
+            if (state != STATE_MOVE)
+                return;
+            // 移动页面
+            // 翻回，先判断当前哪一页处于未返回状态
+            if (prePageLeft < mWidth && speed >= 0)
+            {
+                // 当前页处于未返回状态
+                moveRight(PRE);
+
+            }
+            else if (currPageLeft > 0 && speed <= 0)
+            {
+                // 前一页处于未返回状态
+                moveLeft(CURR);
+            }
+            else if (speed < 0 && index > 1)
+            {
+                // 向左翻，翻动的是当前页
+                moveLeft(PRE);
+                if (prePageLeft == 0)
+                {
+                    index--;
+                    // 翻回一页，添加一页在最上层，隐藏在最左边
+                    addPrePage();
+                }
+            }
+            else if (speed > 0 && index < adapter.getCount())
+            {
+                // 向右翻，翻动的是前一页
+                moveRight(CURR);
+                if (currPageLeft == mWidth)
+                {
+                    index++;
+                    // 翻过一页，在底下添加一页，把最上层页面移除
+                    addNextPage();
+                }
+
+            }
+            if (right == mWidth || right == 2 * mWidth)
+            {
+                releaseMoving();
+                state = STATE_STOP;
+                quitMove();
+            }
+            ScanView.this.requestLayout();
+        }
+
+    };
+
+如果在移动状态才进行判断处理，根据当前页和或前一页的位置及移动的速度，计算页面位置及是否切换完成。
+
+
+右滑当前页过程就是计算页面位置，判断是否滑动底，是就加一页：
+
+    moveRight(CURR);
+    if (currPageLeft == mWidth)
+    {
+        index++;
+        // 翻过一页，在底下添加一页，把最上层页面移除
+        addNextPage();
+    }
+
+          
+向右滑动位置的计算，根据速度计算出左右位置：
+
+    /**
+     * 向右滑。注意可以滑动的页面只有当前页和前一页
+     * 
+     * @param which
+     */
+    private void moveRight(int which)
+    {
+        switch (which)
+        {
+            case PRE:
+                prePageLeft += MOVE_SPEED;
+                if (prePageLeft > mWidth)
+                    prePageLeft = mWidth;
+                right = mWidth + prePageLeft;
+                break;
+            case CURR:
+                currPageLeft += MOVE_SPEED;
+                if (currPageLeft > mWidth)
+                    currPageLeft = mWidth;
+                right = mWidth + currPageLeft;
+                break;
+        }
+    }
+
+其它位置滑动也如此。翻页的基本逻辑过程都介绍完成了。
+
+## 事件冲突处理
+
+这里就简单很多了，因为这里页面要同时上下滑和左右滑。就在onInterceptTouchEvent做方向上的判断，左右滑动时才去拦截事件就行了。关键点在ACTION_DOWN时的处理，只有在ACTION_MOVE时才去拦截，所以父控件自己的onTouchEvent的down事件是接受不到的，必须在onInterceptTouchEvent中就处理，这里是需要按下时的x坐标，必须此时就记录下来。
+
+代码如下：
+
+	 @Override
+    public boolean onInterceptTouchEvent(MotionEvent ev)
+    {
+        boolean handled = false;
+        float xDistance = 0;
+        float yDistance = 0;
+
+        switch (ev.getAction())
+        {
+            case MotionEvent.ACTION_DOWN:
+                xLast = ev.getX();
+                yLast = ev.getY();
+
+                lastX = ev.getX();
+                try
+                {
+                    if (vt == null)
+                    {
+                        vt = VelocityTracker.obtain();
+                    }
+                    else
+                    {
+                        vt.clear();
+                    }
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                }
+                vt.addMovement(ev);
+                mEvents = 0;
+                break;
+            case MotionEvent.ACTION_MOVE:
+                final float curX = ev.getX();
+                final float curY = ev.getY();
+
+                xDistance += Math.abs(curX - xLast);
+                yDistance += Math.abs(curY - yLast);
+
+                if (xDistance > yDistance)
+                {
+                    handled = true;
+                }
+        }
+        return handled;
+
+    }
+
+
+## 后记 
+
+主要过程都介绍完毕，当然有一些细节过程没有介绍，代码上也有很多可以优化的地方。但这是一年前写的东西了，当时也是很费了点心。源码比较多就不贴出来了。可以到github上看源码：
+<https://github.com/myandy/shishi/blob/master/shishi/src/main/java/com/myth/shishi/wiget/ScanView.java>

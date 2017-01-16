@@ -1,0 +1,152 @@
+---
+title:      "下载进度最流畅单项刷新"
+description:   "下载进度监听及列表单项刷新方法"
+date:       2016-10-20 12:00:00
+author:     "安地"
+tags: [Android]
+    
+---
+
+## 需求
+
+在应用市场中，下载按钮十分突出，几乎每个界面都有，每个界面都需要监听下载状态及进度，那该怎么做又如何做到不卡顿呢？
+
+## 实现
+
+### 监听下载状态
+
+由于下载库是独立完备的，没有自带下载监听，只有一个多项任务刷新通知栏的地方，不方便修改，还是自己写个监听数据库单项刷新的方法。继承ContentObserver监听数据库，其中我发现单项数据修改时uri尾数为数字，即下载id，否则则尾数不带数字，由此可以区分是首次下载还是更新进度。
+
+    public class DownloadContentObserver extends ContentObserver {
+    
+        private Context mContext;
+        private Handler mHandler;  //此Handler用来更新UI线程
+    
+        public DownloadContentObserver(Context context, Handler handler) {
+            super(handler);
+            mContext = context;
+            mHandler = handler;
+        }
+    
+    
+        /**
+         * 首次下载uri为content://com.newvr.android.download/my_downloads/
+         * 下载进行uri为content://com.newvr.android.download/my_downloads/num
+         */
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            BLog.get().d("myth", "onChange" + uri.toString());
+            long downloadId = getDownloadId(uri);
+            if (downloadId != -1) {
+                doUpdate(downloadId);
+            } else {
+                Message message = Message.obtain(mHandler, DownloadHelper.MSG_WHAT_DOWNLOAD_START);
+                mHandler.sendMessage(message);
+            }
+        }
+        
+        //获取单项下载信息，并发送消息出去
+        private void doUpdate(long downid) {
+    
+            DownloadManager.Query query = new DownloadManager.Query();
+            query.setFilterById(downid);
+    
+            Cursor cursor = DownloadHelper.getInstance(mContext).getmDownloadManager().query(query);
+            while (cursor.moveToNext()) {
+                DownloadItemInfo info = new DownloadItemInfo();
+                info.currentSize = cursor.getLong(cursor.getColumnIndexOrThrow(Downloads.Impl.COLUMN_CURRENT_BYTES));
+                info.allSize = cursor.getLong(cursor.getColumnIndexOrThrow(Downloads.Impl.COLUMN_TOTAL_BYTES));
+                info.url = cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_URI));
+                info.status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS_ORIGINAL));
+                info.downloadId = cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_ID));
+                info.filePath = cursor.getString(cursor.getColumnIndex(Downloads.Impl._DATA));
+                info.mimeType = cursor.getString(cursor.getColumnIndex(Downloads.Impl.COLUMN_MIME_TYPE));
+                info.speed = cursor.getLong(cursor.getColumnIndex(Downloads.Impl.COLUMN_DOWNLOAD_SPEED));
+                Message message = Message.obtain(mHandler, DownloadHelper.MSG_WHAT_DOWNLOAD_PROGRESS, info);
+                mHandler.sendMessage(message);
+            }
+            cursor.close();
+        }
+        
+        //获取下载id
+        private long getDownloadId(Uri uri) {
+            String segment = uri.getLastPathSegment();
+            if (segment.matches("\\d+")) {
+                return Long.parseLong(segment);
+            }
+            return -1;
+        }
+    
+    
+    } 
+
+注册ContentObserver，这里需要知道监听数据库的uri。
+     
+     DownloadContentObserver downloadContentObserver = new DownloadContentObserver(mContext,  handler);
+     mContext.getContentResolver().registerContentObserver(allDownloadsContentUri, true, downloadContentObserver);
+
+### 使用EventBus
+
+在列表页要接收下载监听的方法，为了代码方便以及可读性，我用EventBus转发了一次，需要使用的地方监听对应事件就行了。
+
+   handler = new Handler(looper) {
+            @Override
+            public void handleMessage(Message msg) {
+                if (msg.what == MSG_WHAT_DOWNLOAD_PROGRESS) {
+                    DownloadProgressEvent event = new DownloadProgressEvent();
+                    event.info = (DownloadItemInfo) msg.obj;
+                    EventBus.getDefault().post(event);
+                } else if (msg.what == MSG_WHAT_DOWNLOAD_START) {
+                    EventBus.getDefault().post(new DownloadStartEvent());
+                }
+            }
+        };
+
+### 在列表页处理事件
+
+      @Subscribe
+        public void onEventMainThread(DownloadStartEvent event) {
+            mAdapter.notifyDataSetChanged();
+        }
+    
+        @Subscribe
+        public void onEventMainThread(DownloadProgressEvent event) {
+            VrContent dbContent = DBCenter.getInstance().getVrContentByPath(event.info.filePath);
+            if (dbContent != null) {
+                int position = mAdapter.getContentPosition(dbContent.getContentId());
+                if (getActivity() == null || position < 0) {
+                    return;
+                }
+                mAdapter.notifyItemChanged(position, event.info);
+            }
+        }
+        
+ DownloadStartEvent因为不知道下载项，就只能全刷新，DownloadProgressEvent时根据下载路径找到对应本地数据，因为我们有两个表，一个本地内容表，一个下载表，找到本地数据后根据本地数据库中的id对比列表数据看是否在这个列表里显示，是就刷新对应项。
+ mAdapter.notifyItemChanged(position, event.info);里面有两个参数，第二个是payload，解释是这样的：@param payload Optional parameter, use null to identify a "full" update，payload 是null则表示是完全的刷新，我们这里不用完全刷新，我选择把下载信息传入。
+ 
+### payload使用
+ 
+ 在adapter中使用payload，我这里封装的原因把逻辑放入holder中处理，然后就随意处理了，payload不为空时就刷新下载相关部分就行了，关键在于不用刷新item的图片了，会流畅很多，下载项的数据就是payload。
+ 
+        @Override
+        public void onBindViewHolder(H holder, int position) {
+            holder.setIndex(position);
+            holder.bindData(getItem(position));
+        }
+    
+        @Override
+        public void onBindViewHolder(H holder, int position, List<Object> payloads) {
+            holder.setIndex(position);
+            if (!payloads.isEmpty()) {
+                holder.bindData(getItem(position), payloads.get(0));
+            } else {
+                holder.bindData(getItem(position));
+            }
+        }
+ 
+ 
+
+
+## 总结
+
+ContentObserver可以监听到改变的单项，但需要根据uri的数字进行判断，Adapter.notifyItemChanged可以使用payload，没有使用时刷新时滑动列表十分卡顿，使用后非常流畅。
