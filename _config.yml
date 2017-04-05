@@ -5,10 +5,12 @@
 # Site
 title: AnddyMao's Bolg
 subtitle: Yesterday you said tomorrow
-description: There is nothing you need
+description: Yesterday you said tomorrow
 author: AnddyMao
-language: zh-CN
-timezone: 
+language: zh-Hans
+timezone:
+since: 2016
+
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
@@ -63,7 +65,7 @@ pagination_dir: page
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
-theme: yelee
+theme: next
 
 # Deployment
 ## Docs: https://hexo.io/docs/deployment.html

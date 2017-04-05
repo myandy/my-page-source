@@ -165,6 +165,7 @@ tags:
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_config" />
       </service>
+
 xml配置如下：
 
 	 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"</span>
@@ -175,7 +176,8 @@ xml配置如下：
     android:notificationTimeout="100" />
 
 自定义的辅助服务就在代码中静态注册就行了：
-CommonAccessibilityService.registerAccessibilityService(MyAccessibilityService.getInstance());
+
+    CommonAccessibilityService.registerAccessibilityService(MyAccessibilityService.getInstance());
 
 这样就实现了一个变多个了。
 

@@ -3,7 +3,8 @@ title:      "DayDream Android SDK视频播放源码浅析"
 description:   "上一篇讲到Android中VR播放方式，最后就用到了DayDream（GVR） Android SDK中的VrVideoView来进行视频播放，现在来简要分析下其源码。"
 date:       2016-10-14 12:00:00
 author:     "安地"
-tags: [Android]
+tags:
+        - Android
     
 ---
 
