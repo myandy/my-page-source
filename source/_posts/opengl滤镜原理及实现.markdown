@@ -3,8 +3,9 @@ title:      "opengl滤镜原理及实现"
 description: "初学opengl"
 date:       2017-1-14 12:00:00
 author:     "安地"
-tags: [opengl]
-    
+tags:
+          - Android
+          - OpenGL
 ---
 
 ## Opengl着色器语言（glsl）

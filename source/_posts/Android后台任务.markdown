@@ -3,7 +3,8 @@ title:      "Android后台任务的多种实现方式及使用场景介绍"
 description: "AsyncTaskLoader和JobService的详细解析"
 date:       2017-1-17 12:00:00
 author:     "安地"
-tags: [Android]
+tags:
+        - Android
     
 ---
 

@@ -3,7 +3,9 @@ title:      "Android中VR播放方式及实现分析"
 description:   "在一个Android应用中实现了Unity播放和Android播放"
 date:       2016-10-13 12:00:00
 author:     "安地"
-tags: [Android,Unity]
+tags:
+        - Android
+        - Unity
     
 ---
 

@@ -3,8 +3,8 @@ title:      "下载进度最流畅单项刷新"
 description:   "下载进度监听及列表单项刷新方法"
 date:       2016-10-20 12:00:00
 author:     "安地"
-tags: [Android]
-    
+tags:
+      - Android
 ---
 
 ## 需求
@@ -89,7 +89,8 @@ tags: [Android]
 
 在列表页要接收下载监听的方法，为了代码方便以及可读性，我用EventBus转发了一次，需要使用的地方监听对应事件就行了。
 
-   handler = new Handler(looper) {
+
+        handler = new Handler(looper) {
             @Override
             public void handleMessage(Message msg) {
                 if (msg.what == MSG_WHAT_DOWNLOAD_PROGRESS) {
