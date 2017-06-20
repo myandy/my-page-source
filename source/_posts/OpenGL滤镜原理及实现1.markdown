@@ -1,6 +1,6 @@
 ---
-title:      "opengl滤镜原理及实现"
-description: "初学opengl"
+title:      OpenGL滤镜原理及实现1
+description: 颜色查找表原理及实现
 date:       2017-1-14 12:00:00
 author:     "安地"
 tags:
