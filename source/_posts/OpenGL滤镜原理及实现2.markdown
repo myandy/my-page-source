@@ -78,10 +78,9 @@ tags:
         gl_FragColor = mix(textureColor, vec4(newColor.rgb, textureColor.w), strength);
         }
 
-因为一共是64个8*8的小正方形，先根据blue色值找到对应的小正方形的坐标，再根据red色值算出位置小正方形内的横坐标，根据green色值算出小正方形内的纵坐标，就可以得出整体坐标了。
+因为一共是64个8×8的小正方形，先根据blue色值找到对应的小正方形的坐标，再根据red色值算出位置小正方形内的横坐标，根据green色值算出小正方形内的纵坐标，就可以得出整体坐标了。
 要注意两个点，一个是位置计算是取中心点，所以有0.5/512等于半个像素的偏移，再计算RG时又向左偏移了一个像素，这样为0时向右偏移半个像素计算，其它值时向左偏移半个像素计算，非常巧妙。
-还有一个是色值偏差处理，因为只能处理64*64*64中颜色，就会有不准确的问题，之前说到内插法处理偏移，这里就是取两个点的色值根据比例取最后的色值。blueColor取整后只能算到0-63，实际却有0-255，
-最后就需要根据小数部分计算出最近的两个点，这样就能得出相对准确的值。
+还有一个是色值偏差处理，因为只能处理64×64×64中颜色，就会有不准确的问题，之前说到内插法处理偏移，这里就是取两个点的色值根据比例取最后的色值。blueColor取整后只能算到0-63，实际却有0-255，最后就需要根据小数部分计算出最近的两个点，这样就能得出相对准确的值。
 
 ![512查找表图](/img/post_filter_3.png)
 
@@ -91,6 +90,7 @@ tags:
 
 对比度是原色值中差值大小，让原色值减去中间数，这里简单点直接定为0.5，乘以对比度的比例，再加上原来的中间数。
 片段着色器代码如下：
+
              varying highp vec2 textureCoordinate;
              uniform sampler2D inputImageTexture;
              uniform lowp float contrast;
@@ -98,7 +98,7 @@ tags:
              {
                  lowp vec4 textureColor = texture2D(inputImageTexture, textureCoordinate);
                  gl_FragColor = vec4(((textureColor.rgb - vec3(0.5)) * contrast + vec3(0.5)), textureColor.w);
-             };
+             }
 ### 亮度
 
 这个非常简单，rgb同时增加一个值就可以增加亮度了，代码就不贴了。
@@ -213,8 +213,8 @@ tags:
         gl_FragColor = vec4(mix(rgb.x, vignetteColor.x, percent), mix(rgb.y, vignetteColor.y, percent), mix(rgb.z, vignetteColor.z, percent), 1.0);
     }
 
-晕影还可以通过图片叠加的方式去实现，PhotoShop中有各种图片叠加方式都可以转换到opengl中。
+晕影还可以通过图片叠加的方式去实现，PhotoShop中有各种图片叠加方式都可以转换到OpenGL中。
 
 # 总结
 
-还有一些常见效果，比如黑白，模糊等，PhotoShop中的效果都可以在opengl中实现，但多种处理叠加后用原始算法就性能非常差了，这时候用颜色查找表滤镜就非常合适了，一种空间换时间的方法。
+还有一些常见效果，比如黑白，模糊等，PhotoShop中的效果都可以在OpenGL中实现，但多种处理叠加后用原始算法就性能非常差了，这时候用颜色查找表滤镜就非常合适了，一种非常好的空间换时间的方法。
