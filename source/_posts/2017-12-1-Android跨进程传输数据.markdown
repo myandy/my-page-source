@@ -1,0 +1,146 @@
+---
+title:      "Android跨进程传输数据"
+description:   "特殊格式的序列化方法"
+date:       2017-12-1 12:00:00
+author:     "安地"
+tags:
+      - Android
+---
+
+## 前言
+
+跨进程传输数据需要序列化对象,java自带的Serializable效率较低,Android推荐使用Parcelable.
+Parcelable的原理十分简单,通过自定义顺序写入和读取基本类型数据到Parcel中,来生成和读取对象.
+使用插件自动生成Parcelable的代码也十分方便.但对于一些特殊数据,自动生成不了,就需要手动写了,很灵活.
+
+## Android没有实现Parcelable的数据
+
+对于这类,要了解类的信息,手动实现,我碰到的是Matrix和Path
+
+### Matrix
+
+Matrix对象主要是float数组,读取到这个数据就可以.
+
+        @Override
+        public void writeToParcel(Parcel dest, int flags) {
+            float[] f = new float[9];
+            this.getValues(f);
+            dest.writeFloatArray(f);
+        }
+
+        protected ParcelableMatrix(Parcel in) {
+            float[] f = new float[9];
+            in.readFloatArray(f);
+            setValues(f);
+        }
+###  Path
+Path数据主要在于路径点,单独写一个方法从路径点还原Path
+
+    public static Path getPathFromPointList(List<PointF> pointFList) {
+            Path path = new Path();
+            PointF prePoint = null;
+            for (PointF pointF : pointFList) {
+                float x = pointF.x;
+                float y = pointF.y;
+                if (prePoint == null) {
+                    path.moveTo(x, y);
+                } else {
+                    float currentX = (prePoint.x + x) / 2f;
+                    float currentY = (prePoint.y + y) / 2f;
+                    path.quadTo(prePoint.x, prePoint.y, currentX, currentY);
+                }
+                prePoint = pointF;
+            }
+            return path;
+        }
+
+## 抽象类型数据
+
+Parcelable传输时需要一个确定的类类型,从而使用对应的Creator,但有时定义的是抽象类型,传输时是实际类型,传输时每次类型不一样,需要特殊处理.
+另一种是抽象类型List,每一项的实际类型都可能不一样,也需要特殊处理.写了一个工具类处理这种情况,再Parcelable中写入list的数量和类型的名称从而准确的还原.
+
+    public class ParcelableGenericCreator<T extends Parcelable> {
+
+        private static final String DATA_NULL = "NULL";
+
+        public void writeList(Parcel dest, int flags, List<T> list) {
+            if (list == null) {
+                dest.writeInt(-1);
+            }
+            dest.writeInt(list.size());
+            for (T t : list) {
+                dest.writeString(t.getClass().getName());
+                dest.writeParcelable(t, flags);
+            }
+        }
+
+        public List<T> readList(Parcel in) {
+            int size = in.readInt();
+            if (size == -1) {
+                return null;
+            }
+            List<T> list = new ArrayList<T>(size);
+            for (int i = 0; i < size; i++) {
+                try {
+                    list.add((T) in.readParcelable(Class.forName(in.readString()).getClassLoader()));
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
+            return list;
+        }
+
+        public void writeObject(Parcel dest, int flags, T t) {
+            if (t == null) {
+                dest.writeString(DATA_NULL);
+            } else {
+                dest.writeString(t.getClass().getName());
+                dest.writeParcelable(t, flags);
+            }
+        }
+
+        public T readObject(Parcel in) {
+            T t = null;
+            try {
+                String className = in.readString();
+                if (!TextUtils.equals(className, DATA_NULL)) {
+                    t = in.readParcelable(Class.forName(className).getClassLoader());
+                }
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+            return t;
+        }
+    }
+
+## 占用空间较大的对象
+
+Android的Binder机制传输数据大小限制是1M,如果较大的数据,比如Bitmap就传输不了了.这时可以使用MemoryFile,共享内存的方式.
+MemoryFile可以创建一块共享内存区域,通过文件描述符去获取.FileDescriptor是非Parcelable的,需要用ParcelFileDescriptor.
+ParcelFileDescriptor下面的创建方法是Hide的,需要通过反射调用.MemoryFile的参数设置和获取方法也是隐藏的,也需要反射调用.
+
+
+## native对象
+
+在jni开发时内部保存的对象在对应进程的native堆里面,跨进程传输时需要先传到java层,再序列化传输.
+下面的方法实现了把native的unsigned char*和int数据传输到java.
+
+    void transData(jobject j_data,unsigned char *data,int int_value){
+        jbyteArray array = env->NewByteArray(array_size);
+        env->SetByteArrayRegion(array, 0, array_size, (jbyte*)data);
+
+        jclass cls = env->GetObjectClass(j_data);
+        jfieldID intFieldId = env->GetFieldID(cls , "intData" , "I");
+        jfieldID byteArrayFieldId = env->GetFieldID(cls , "byteArray" , "[B");
+        env->SetIntField(j_data , intFieldId , int_value);
+        env->SetObjectField(j_data , byteArrayFieldId , array);
+    }
+
+## 跨应用传输
+
+跨进程不跨应用的话,在aidl中定义好传输对象就可以.一旦设计到跨应用,那就需要定义好标准接口和标准数据格式,
+为扩展和变更作准备.
+
+## 总结
+
+跨进程传输需要注意的点非常多,需要根据实际场景灵活设计.
