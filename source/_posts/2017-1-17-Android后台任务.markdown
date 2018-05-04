@@ -23,7 +23,7 @@ Loader本身不具备异步加载数据的能力；AsyncTaskLoader继承自Loade
 
 
 AsyncTaskLoader实现是在onForceLoad时创建了一个LoadTask，继承自AsyncTask，在状态方法中执行AsyncTaskLoader的对应方法，CountDownLatch用于同步计数。
-
+``` java
      final class LoadTask extends AsyncTask<Void, Void, D> implements Runnable {
             private final CountDownLatch mDone = new CountDownLatch(1);
             boolean waiting;
@@ -76,15 +76,15 @@ AsyncTaskLoader实现是在onForceLoad时创建了一个LoadTask，继承自Asyn
 
             }
         }
-
+```
  Loader是靠LoaderManager管理的，LoaderManager可以同时管理多个Loader，即LoaderManager与Loader是一对多的关系。我们是在Activity或Fragment使用Loader的，虽然Loader有很多public方法，但是我们不能直接调用Loader的这些public方法，因为这会扰乱LoaderManag对Loader的正常管理，我们应该通过LoaderManager的initLoader以及restartLoader方法间接管理Loader，并通过LoaderCallbacks的回调方法（onCreateLoader、onLoadFinished、onLoaderReset）对数据进行相应处理。
  LoaderManager加载Loader代码：
-
+``` java
          LoaderManager manager = this.getLoaderManager();
          manager.initLoader(0, null, myLoader);
-
+```
  先获取到LoaderManager，再initLoader，参数1是Loader id，参数2是Bundle参数，参数3是LoaderCallbacks，其代码如下：
-
+``` java
          private LoaderCallbacks<D> myLoader = new LoaderCallbacks<D>() {
                  //  2.1创建一个新的CursorLoader对象，携带游标
                  public Loader<D> onCreateLoader(int id, Bundle args) {
@@ -97,7 +97,7 @@ AsyncTaskLoader实现是在onForceLoad时创建了一个LoadTask，继承自Asyn
                  public void onLoaderReset(Loader<D> arg0) {
                  }
          };
-
+```
   在onCreateLoader方法new一个Loader，加载完成回调onLoadFinished方法可以更新UI信息。
 
 
@@ -110,7 +110,7 @@ AsyncTaskLoader实现是在onForceLoad时创建了一个LoadTask，继承自Asyn
 Google在Android 5.0中引入JobScheduler来执行一些需要满足特定条件但不紧急的后台任务，APP利用JobScheduler来执行这些特殊的后台任务时来减少电量的消耗。
 
 JobService继承自Service,实现了onBind，binder代码如下：
-
+``` java
     /** Binder for this service. */
         IJobService mBinder = new IJobService.Stub() {
             @Override
@@ -135,10 +135,10 @@ JobService继承自Service,实现了onBind，binder代码如下：
                 }
             }
         }
-
+```
 代码就是生成Handler，发送开始和结束消息，再看handler代码：
 
-
+``` java
      /**
          * Runs on application's main thread - callbacks are meant to offboard work to some other
          * (app-specified) mechanism.
@@ -223,13 +223,13 @@ JobService继承自Service,实现了onBind，binder代码如下：
                 }
             }
         }
-
+```
 在收到MSG_EXECUTE_JOB消息时通过JobService.this.onStartJob(params)来执行任务，ackStartMessage可以看到里面是执行callback方法，就是操作执行完成后的回调方法。
 
 
 JobService是通过JobScheduler来执行一个JobInfo，调用过程如下：
 
-
+``` java
     mJobScheduler = (JobScheduler) getSystemService( Context.JOB_SCHEDULER_SERVICE );
 
     JobInfo.Builder builder = new JobInfo.Builder( 1, new ComponentName( getPackageName(),MyJobService.class.getName()));
@@ -238,7 +238,7 @@ JobService是通过JobScheduler来执行一个JobInfo，调用过程如下：
     if( mJobScheduler.schedule( builder.build() ) <= 0 ) {
         //If something goes wrong
     }
-
+```
 
 builder的new 方法传的是jobId和jobService组件名，还可以设置各种参数，比如延迟时间，网络状态，充电状态等。JobScheduler对象的schedule方法把JobInfo贴进任务表，就会按照设定执行了。
 

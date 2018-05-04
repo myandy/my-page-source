@@ -5,7 +5,7 @@ description:   "人眼对亮度信息更敏感,所以显示器都是直接使用
 date:       2017-12-4 12:00:00
 author:     "安地"
 tags:
-      - OpenG
+      - OpenGL
       - Android
 ---
 
@@ -40,6 +40,7 @@ YUV有很多种格式,android常用的YUV420sp.YUV的主要信息是亮度Y,YUV4
 
 RGB转YUV420sp算法:
 
+``` C
     void encodeyuv420sp(int *rgbData, MUInt8 *yuv, int width, int height) {
         int frameSize = width * height;
 
@@ -68,12 +69,13 @@ RGB转YUV420sp算法:
             }
         }
     }
-
+```
 ## OpenGL中加载NV21数据
 
 先加载YUV数据,分割成YBuffer和uvBuffer,再在OpenGL线程加载成纹理.这里要非常注意宽度必须是4的倍数,否则显示会形变.
 因为OpenGL纹理加载必须是2的倍数,YUVFilter需要传入UV的纹理,UV的纹理的宽度是原图宽度的一半.这个问题找了非常久,后面发现是和大小有关,才一步步找到原因.
 
+``` java
         /**
          * OpenGL纹理加载必须是2的倍数,YUVFilter需要传入UV的纹理,所以宽度必须是4的倍数
          *
@@ -103,9 +105,10 @@ RGB转YUV420sp算法:
                 }
             });
         }
-
+```
  yBuffer是原图片大小的纹理,uvBuffer的宽高都为原图片的1/2,正好1/4大小,然后按位置即可对应到图片的RGB数据了.
 
+``` java
      public static void loadYuvToTextures(final Buffer channelY, final Buffer channelUV, final int width, final int height, int[] yuvTextures) {
             if (channelY == null || channelUV == null) {
                 return;
@@ -160,9 +163,10 @@ RGB转YUV420sp算法:
                         GLES20.GL_LUMINANCE_ALPHA, GLES20.GL_UNSIGNED_BYTE, channelUV);
             }
         }
-
+```
 片段着色器代码,从对应位置加载到YUV数据,然后转换成RGB,即可显示出来了.
 
+``` java
         public static final String fragmentShader =
                 "precision highp float;                             \n" +
 
@@ -191,7 +195,7 @@ RGB转YUV420sp算法:
                         //We finally set the RGB color of our pixel
                         "   gl_FragColor = vec4(r, g, b, 1.0);              \n" +
                         "}                                                  \n";
-
+```
 ## 总结
 
 在处理算法是YUV格式的,且需要频繁调用时,用OpenGL直接加载YUV数据效率是非常高的,用OpenGL作为显示,最后保存时再处理一遍就行了.

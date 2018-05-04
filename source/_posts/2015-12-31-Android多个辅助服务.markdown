@@ -18,6 +18,7 @@ tags:
 
 自定义辅助服务的接口，主要就这几个方法了。
 
+``` java
 	/**
  	* Created by AndyMao on 2015/12/15.
  	*/
@@ -35,10 +36,11 @@ tags:
 
     void onDestroy();
 	}
-
+```
 
 一个空的实现如下，用了单例。 
 
+``` java
 	/**
      * Created by AndyMao on 2015/12/15.
      */
@@ -73,9 +75,10 @@ tags:
 
         }
     }
-
+```
 真正的服务辅助在这里，主要就是在各个方法上回调已注册的自定义服务的对应方法。要注意的是同步各个方法，主要是注册和回调同时执行的话，就会报错了，虽然概率比较小。
 
+``` java
 	/**
      * Created by AndyMao on 2015/12/15.
      */
@@ -153,8 +156,11 @@ tags:
             }
         }
     }
+
+```
 辅助服务的xml注册：
 
+``` xml
    	<service android:name=".accessibility.CommonAccessibilityService"
             android:enabled="@bool/atLeastIceCreamSandwich"
              android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
@@ -165,20 +171,22 @@ tags:
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_config" />
       </service>
-
+```
 xml配置如下：
 
+``` xml
 	 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"</span>
     android:accessibilityEventTypes="typeAllMask"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:canRetrieveWindowContent="true"
     android:description="@string/accessibility_tips"
     android:notificationTimeout="100" />
-
+```
 自定义的辅助服务就在代码中静态注册就行了：
 
+``` java
     CommonAccessibilityService.registerAccessibilityService(MyAccessibilityService.getInstance());
-
+```
 这样就实现了一个变多个了。
 
 

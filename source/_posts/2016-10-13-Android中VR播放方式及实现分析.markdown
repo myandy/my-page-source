@@ -25,13 +25,13 @@ Unity导出Android代码后，manifest中是GoogleUnityActivity,我们需要在A
 
 ### Unity返回崩溃的问题
 开始Unity返回时没有效果，就在Unity端调用了GoogleUnityActivity的finish方法，但就提示意外关闭，几番尝试改为调用杀死本进程并把Unity的Activity放入远程进程中终于可以了。就是manifest的Activity加上 android:process=":remote"，在unity退出时调下面这个方法。
-
+``` java
     public void quit() {
         android.os.Process.killProcess(android.os.Process.myPid());
         System.exit(0);
 
     }
-  
+```
 ### 混淆的问题
 
 官方没有说明，很多地方不能混淆的，还有Android和Unity互相调用的部分也要防混淆，都加上就可以了，不注意这些bug就真难找。

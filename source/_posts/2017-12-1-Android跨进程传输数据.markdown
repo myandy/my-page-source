@@ -21,6 +21,7 @@ Parcelable的原理十分简单,通过自定义顺序写入和读取基本类型
 
 Matrix对象主要是float数组,读取到这个数据就可以.
 
+``` java
         @Override
         public void writeToParcel(Parcel dest, int flags) {
             float[] f = new float[9];
@@ -33,9 +34,10 @@ Matrix对象主要是float数组,读取到这个数据就可以.
             in.readFloatArray(f);
             setValues(f);
         }
+```
 ###  Path
 Path数据主要在于路径点,单独写一个方法从路径点还原Path
-
+``` java
     public static Path getPathFromPointList(List<PointF> pointFList) {
             Path path = new Path();
             PointF prePoint = null;
@@ -53,12 +55,12 @@ Path数据主要在于路径点,单独写一个方法从路径点还原Path
             }
             return path;
         }
-
+```
 ## 抽象类型数据
 
 Parcelable传输时需要一个确定的类类型,从而使用对应的Creator,但有时定义的是抽象类型,传输时是实际类型,传输时每次类型不一样,需要特殊处理.
 另一种是抽象类型List,每一项的实际类型都可能不一样,也需要特殊处理.写了一个工具类处理这种情况,再Parcelable中写入list的数量和类型的名称从而准确的还原.
-
+``` java
     public class ParcelableGenericCreator<T extends Parcelable> {
 
         private static final String DATA_NULL = "NULL";
@@ -112,7 +114,7 @@ Parcelable传输时需要一个确定的类类型,从而使用对应的Creator,�
             return t;
         }
     }
-
+```
 ## 占用空间较大的对象
 
 Android的Binder机制传输数据大小限制是1M,如果较大的数据,比如Bitmap就传输不了了.这时可以使用MemoryFile,共享内存的方式.
@@ -124,7 +126,7 @@ ParcelFileDescriptor下面的创建方法是Hide的,需要通过反射调用.Mem
 
 在jni开发时内部保存的对象在对应进程的native堆里面,跨进程传输时需要先传到java层,再序列化传输.
 下面的方法实现了把native的unsigned char*和int数据传输到java.
-
+``` java
     void transData(jobject j_data,unsigned char *data,int int_value){
         jbyteArray array = env->NewByteArray(array_size);
         env->SetByteArrayRegion(array, 0, array_size, (jbyte*)data);
@@ -135,7 +137,7 @@ ParcelFileDescriptor下面的创建方法是Hide的,需要通过反射调用.Mem
         env->SetIntField(j_data , intFieldId , int_value);
         env->SetObjectField(j_data , byteArrayFieldId , array);
     }
-
+```
 ## 跨应用传输
 
 跨进程不跨应用的话,在aidl中定义好传输对象就可以.一旦设计到跨应用,那就需要定义好标准接口和标准数据格式,

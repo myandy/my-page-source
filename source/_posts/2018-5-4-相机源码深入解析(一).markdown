@@ -1,0 +1,739 @@
+---
+title:      "Android8.0相机源码深入解析(一)"
+description:   "相机流程深入解析:从framework到hal调用"
+date:       2018-5-4 12:00:00
+author:     "安地"
+tags:
+      - Camera
+      - Android
+---
+
+# 相机整体架构
+
+相机api1的HAL接口被设计成了三种运行模式：预览,静态拍摄和视频录制.
+预览对应于代码中 Camera 类的 startPreview 函数，而静态拍摄对应于Camera类的takePicture函数，视频录制则是在MediaRecorder类的setCamera函数中传入Camera对象实例。整体架构图如下所示:
+
+![Alt text](/img/post_camera_1.png)
+根据架构图再深入源码研究调用流程,才能真正理解相机的架构.做相机开发的话主要有APP层开发和HAL层开发,HAL层由芯片厂商定制(比如高通等),手机厂商可以再其上增加一些内容.本文的分析基于android8.0源码,着重分析调用流程和层级数据传输,弄懂android架构.需要对binder机制,AIDL及HIDL有一定了解.
+
+# Android相机调用流程解析
+
+相机api1最基础的方法是startPreview,我们根据startPreview的调用深入了解下api1的相机调用流程.
+
+## 从framework到jni
+
+  看下framework中android.hardware.Camera里面的对应方法,
+
+ ``` java
+    /**
+    * Starts capturing and drawing preview frames to the screen.
+    * Preview will not actually start until a surface is supplied
+    * with {@link #setPreviewDisplay(SurfaceHolder)} or
+    * {@link #setPreviewTexture(SurfaceTexture)}.
+    *
+    * <p>If {@link #setPreviewCallback(Camera.PreviewCallback)},
+    * {@link #setOneShotPreviewCallback(Camera.PreviewCallback)}, or
+    * {@link #setPreviewCallbackWithBuffer(Camera.PreviewCallback)} were
+    * called, {@link Camera.PreviewCallback#onPreviewFrame(byte[], Camera)}
+    * will be called when preview data becomes available.
+    *
+    * @throws RuntimeException if starting preview fails; usually this would be
+    *    because of a hardware or other low-level error, or because release()
+    *    has been called on this Camera instance.
+    */
+    public native final void startPreview();
+ ```
+
+讲到需要调用setPreviewDisplay或者setPreviewTexture方法,才能开始预览,如果setPreviewCallback就会在预览时回调.
+jni方法在android_hardware_Camera.cpp中可以看到注册地方:
+
+ ``` C
+    static const JNINativeMethod camMethods[] = {
+      { "_getNumberOfCameras",
+        "()I",
+        (void *)android_hardware_Camera_getNumberOfCameras },
+      { "_getCameraInfo",
+        "(ILandroid/hardware/Camera$CameraInfo;)V",
+        (void*)android_hardware_Camera_getCameraInfo },
+      { "native_setup",
+        "(Ljava/lang/Object;IILjava/lang/String;)I",
+        (void*)android_hardware_Camera_native_setup },
+      { "native_release",
+        "()V",
+        (void*)android_hardware_Camera_release },
+      { "setPreviewSurface",
+        "(Landroid/view/Surface;)V",
+        (void *)android_hardware_Camera_setPreviewSurface },
+      { "setPreviewTexture",
+        "(Landroid/graphics/SurfaceTexture;)V",
+        (void *)android_hardware_Camera_setPreviewTexture },
+      { "setPreviewCallbackSurface",
+        "(Landroid/view/Surface;)V",
+        (void *)android_hardware_Camera_setPreviewCallbackSurface },
+      { "startPreview",
+        "()V",
+        (void *)android_hardware_Camera_startPreview },
+      { "_stopPreview",
+        "()V",
+        (void *)android_hardware_Camera_stopPreview },
+       ...
+ ```
+
+然后就找到对应jni方法:
+
+``` C
+    static void android_hardware_Camera_startPreview(JNIEnv *env, jobject thiz)
+    {
+         ALOGV("startPreview");
+         sp<Camera> camera = get_native_camera(env, thiz, NULL);
+         if (camera == 0) return;
+
+         if (camera->startPreview() != NO_ERROR) {
+             jniThrowRuntimeException(env, "startPreview failed");
+             return;
+         }
+    }
+```
+ sp是强指针,获取到Camera对象,调用startPreview方法,另外我们再简单看下setPreviewCallbackSurface方法,
+
+``` C
+    static void android_hardware_Camera_setPreviewCallbackSurface(JNIEnv *env,
+         jobject thiz, jobject jSurface)
+    {
+         ALOGV("setPreviewCallbackSurface");
+         JNICameraContext* context;
+         sp<Camera> camera = get_native_camera(env, thiz, &context);
+         if (camera == 0) return;
+
+         sp<IGraphicBufferProducer> gbp;
+         sp<Surface> surface;
+         if (jSurface) {
+             surface = android_view_Surface_getSurface(env, jSurface);
+             if (surface != NULL) {
+                 gbp = surface->getIGraphicBufferProducer();
+             }
+         }
+         // Clear out normal preview callbacks
+         context->setCallbackMode(env, false, false);
+         // Then set up callback surface
+         if (camera->setPreviewCallbackTarget(gbp) != NO_ERROR) {
+             jniThrowException(env, "java/io/IOException", "setPreviewCallbackTarget failed");
+         }
+    }
+```
+
+ 这两个方法都是在android_hardware_Camera.cpp中的静态方法,android_hardware_Camera中还定义了JNICameraContext,用于JNI层调用转换.
+ JNICameraContext及JNI相机上下文,获取Camera同时获取到.这一步就完成android.hardware.camera到JNICameraContext调用逻辑了.
+ get_native_camera是获取native层相机,接下来继续探究底层代码.
+
+
+## 相机native library
+这一步我们调用到了相机client,代码在/frameworks/av/camera里,另外还会调用到相机service,代码在/frameworks/av/services/camera/libcameraservice里,先看Camera.cpp的代码.
+Camera.cpp中startPreview方法,转调到ICamera中了:
+
+``` C
+        // start preview mode
+        status_t Camera::startPreview()
+        {
+            ALOGV("startPreview");
+            sp <::android::hardware::ICamera> c = mCamera;
+            if (c == 0) return NO_INIT;
+            return c->startPreview();
+        }
+```
+
+startPreview方法在ICamera.h中的定义,CameraClient和CameraService都要使用
+
+``` C
+        // start preview mode, must call setPreviewTarget first
+        virtual status_t        startPreview() = 0;
+```
+在ICamera.cpp找到startPreview的实现:
+
+``` C
+       class BpCamera: public BpInterface<ICamera>
+       {
+           public:
+               explicit BpCamera(const sp<IBinder>& impl)
+                   : BpInterface<ICamera>(impl)
+               {
+               }
+               ...
+                // start preview mode, must call setPreviewTarget first
+                status_t startPreview()
+                {
+                    ALOGV("startPreview");
+                    Parcel data, reply;
+                    data.writeInterfaceToken(ICamera::getInterfaceDescriptor());
+                    remote()->transact(START_PREVIEW, data, &reply);
+                    return reply.readInt32();
+                }
+            ...
+```
+  BpCamera是相机BpBinder,就是Binder代理,通过remote()->transact(),这时会在服务进程中调用对应的BnCamera对象的onTransact()方法,根据对应的code(START_PREVIEW),这样就执行了服务端的startPreview方法,具体可详细了解android binder机制.
+
+``` C
+          case START_PREVIEW: {
+              ALOGV("START_PREVIEW");
+              CHECK_INTERFACE(ICamera, data, reply);
+              reply->writeInt32(startPreview());
+              return NO_ERROR;
+          } break;
+```
+
+在CameraService.h中找到了BnCamera的方法定义,属于libcameraservice模块
+
+``` C
+           class Client : public hardware::BnCamera, public BasicClient
+              {
+              public:
+                  typedef hardware::ICameraClient TCamCallbacks;
+
+                  // ICamera interface (see ICamera for details)
+                  virtual binder::Status disconnect();
+                  virtual status_t      connect(const sp<hardware::ICameraClient>& client) = 0;
+                  virtual status_t      lock() = 0;
+                  virtual status_t      unlock() = 0;
+                  virtual status_t      setPreviewTarget(const sp<IGraphicBufferProducer>& bufferProducer)=0;
+                  virtual void          setPreviewCallbackFlag(int flag) = 0;
+                  virtual status_t      setPreviewCallbackTarget(
+                          const sp<IGraphicBufferProducer>& callbackProducer) = 0;
+                  virtual status_t      startPreview() = 0;
+                  ...
+```
+
+CameraService::Client有API1和API2两种实现,转而定义在CameraClient.h中:
+
+``` C
+            /**
+             * Interface between android.hardware.Camera API and Camera HAL device for version
+             * CAMERA_DEVICE_API_VERSION_1_0.
+             */
+
+            class CameraClient : public CameraService::Client
+            {
+            public:
+                // ICamera interface (see ICamera for details)
+                virtual binder::Status  disconnect();
+                virtual status_t        connect(const sp<hardware::ICameraClient>& client);
+                virtual status_t        lock();
+                virtual status_t        unlock();
+                virtual status_t        setPreviewTarget(const sp<IGraphicBufferProducer>& bufferProducer);
+                virtual void            setPreviewCallbackFlag(int flag);
+                virtual status_t        setPreviewCallbackTarget(
+                        const sp<IGraphicBufferProducer>& callbackProducer);
+                virtual status_t        startPreview();
+                ...
+```
+在CameraServece.cpp找到实现方法:
+
+``` C
+            // start preview mode
+            status_t CameraClient::startPreview() {
+                LOG1("startPreview (pid %d)", getCallingPid());
+                return startCameraMode(CAMERA_PREVIEW_MODE);
+            }
+
+            // start recording mode
+            status_t CameraClient::startRecording() {
+                LOG1("startRecording (pid %d)", getCallingPid());
+                return startCameraMode(CAMERA_RECORDING_MODE);
+            }
+
+            // start preview or recording
+            status_t CameraClient::startCameraMode(camera_mode mode) {
+                LOG1("startCameraMode(%d)", mode);
+                Mutex::Autolock lock(mLock);
+                status_t result = checkPidAndHardware();
+                if (result != NO_ERROR) return result;
+
+                switch(mode) {
+                    case CAMERA_PREVIEW_MODE:
+                        if (mSurface == 0 && mPreviewWindow == 0) {
+                            LOG1("mSurface is not set yet.");
+                            // still able to start preview in this case.
+                        }
+                        return startPreviewMode();
+                    case CAMERA_RECORDING_MODE:
+                        if (mSurface == 0 && mPreviewWindow == 0) {
+                            ALOGE("mSurface or mPreviewWindow must be set before startRecordingMode.");
+                            return INVALID_OPERATION;
+                        }
+                        return startRecordingMode();
+                    default:
+                        return UNKNOWN_ERROR;
+                }
+            }
+
+            status_t CameraClient::startPreviewMode() {
+                LOG1("startPreviewMode");
+                status_t result = NO_ERROR;
+
+                // if preview has been enabled, nothing needs to be done
+                if (mHardware->previewEnabled()) {
+                    return NO_ERROR;
+                }
+
+                if (mPreviewWindow != 0) {
+                    mHardware->setPreviewScalingMode(
+                        NATIVE_WINDOW_SCALING_MODE_SCALE_TO_WINDOW);
+                    mHardware->setPreviewTransform(mOrientation);
+                }
+                mHardware->setPreviewWindow(mPreviewWindow);
+                result = mHardware->startPreview();
+                if (result == NO_ERROR) {
+                    sCameraService->updateProxyDeviceState(
+                        hardware::ICameraServiceProxy::CAMERA_STATE_ACTIVE,
+                        mCameraIdStr, mCameraFacing, mClientPackageName);
+                }
+                return result;
+            }
+```
+分preview模式和录像模式,我们只看preview模式,这里看到mHardware,是一个CameraHardwareInterface对象,终于要进入hal层了,调用了setPreviewWindow,然后startPreview,再使用CameraService对象sCameraService更新代理设备状态.
+
+总结下本部分调用,从相机client到相机service,从Camera.cpp的方法实际调用了ICamera.cpp,ICamera实现了BpCamera,最后调用到了BnCamera,BnCamera回调写在ICamera.cpp中,但实际是由远程service调用的,这时是生成了服务端的一个代理.CameraService::Client实现了BnCamera,Client又有API1和API2两种实现,
+最后的方法调入CameraClient中.
+
+## 从native到hal
+
+
+CameraHardwareInterface承担了native到hal层的转换,代码在libcameraservice模块的device1包里,hidl定义在hardware/interface/camera里,继续研究如何调用到hal层的.直接看CameraHardwareInterface.cpp中的方法实现:
+``` C
+            status_t CameraHardwareInterface::startPreview()
+            {
+                ALOGV("%s(%s)", __FUNCTION__, mName.string());
+                if (CC_LIKELY(mHidlDevice != nullptr)) {
+                    return CameraProviderManager::mapToStatusT(
+                            mHidlDevice->startPreview());
+                }
+                return INVALID_OPERATION;
+            }
+```
+mapToStatusT是公共方法,做了一个状态转换,CameraProviderManager在libcameraservice模块的common包里,我们主要看mHidlDevice,CameraHardwareInterface.h中看到mHidlDevice的定义
+
+``` C
+             sp<hardware::camera::device::V1_0::ICameraDevice> mHidlDevice;
+```
+hidl是硬件抽象层接口定义语言,以hidlDevice作为代理调用hal层方法,在hardware/interface/camera/device/1.0/ICameraDevice.hal中可以看到对象的方法定义
+
+``` C
+                /**
+                 * Start preview mode.
+                 *
+                 * @return status The status code for this operation.
+                 */
+                startPreview() generates (Status status);
+```
+在CameraDevice.cpp中找到方法实现:
+
+``` C
+            Return<Status> CameraDevice::startPreview() {
+                ALOGV("%s(%s)", __FUNCTION__, mCameraId.c_str());
+                Mutex::Autolock _l(mLock);
+                if (!mDevice) {
+                    ALOGE("%s called while camera is not opened", __FUNCTION__);
+                    return Status::OPERATION_NOT_SUPPORTED;
+                }
+                if (mDevice->ops->start_preview) {
+                    return getHidlStatus(mDevice->ops->start_preview(mDevice));
+                }
+                return Status::INTERNAL_ERROR; // HAL should provide start_preview
+            }
+```
+
+ mDevice是camera_device_t对象,定义在hardware/libhardware/include/hardware/camera.h中
+
+``` C
+            typedef struct camera_device {
+                /**
+                 * camera_device.common.version must be in the range
+                 * HARDWARE_DEVICE_API_VERSION(0,0)-(1,FF). CAMERA_DEVICE_API_VERSION_1_0 is
+                 * recommended.
+                 */
+                hw_device_t common;
+                camera_device_ops_t *ops;
+                void *priv;
+            } camera_device_t;
+```
+ camera_device_ops也在hardware/libhardware/include/hardware/camera.h中,定义了start_preview等hal层方法:
+
+``` C
+            typedef struct camera_device_ops {
+                ...
+                /**
+                 * Start preview mode.
+                 */
+                int (*start_preview)(struct camera_device *);
+                ...
+```
+
+从CameraHardwareInterface通过camera_device调用到hal层的方法,hal层的方法定义在camera_device_ops_t里,接下来看hal层方法的实现.
+
+## HAL层实现
+  终于进入了hal层,这里用的是高通相机框架,QCamera2HardwareInterface即高通对硬件接口的实现,2是to,在QCamera2HardwareInterface中可以看到对应的hal方法的对应关系:
+
+``` C
+        camera_device_ops_t QCamera2HardwareInterface::mCameraOps = {
+            .set_preview_window =        QCamera2HardwareInterface::set_preview_window,
+            .set_callbacks =             QCamera2HardwareInterface::set_CallBacks,
+            .enable_msg_type =           QCamera2HardwareInterface::enable_msg_type,
+            .disable_msg_type =          QCamera2HardwareInterface::disable_msg_type,
+            .msg_type_enabled =          QCamera2HardwareInterface::msg_type_enabled,
+
+            .start_preview =             QCamera2HardwareInterface::start_preview,
+            .stop_preview =              QCamera2HardwareInterface::stop_preview,
+            .preview_enabled =           QCamera2HardwareInterface::preview_enabled,
+            .store_meta_data_in_buffers= QCamera2HardwareInterface::store_meta_data_in_buffers,
+
+            .start_recording =           QCamera2HardwareInterface::start_recording,
+            .stop_recording =            QCamera2HardwareInterface::stop_recording,
+            .recording_enabled =         QCamera2HardwareInterface::recording_enabled,
+            .release_recording_frame =   QCamera2HardwareInterface::release_recording_frame,
+
+            .auto_focus =                QCamera2HardwareInterface::auto_focus,
+            .cancel_auto_focus =         QCamera2HardwareInterface::cancel_auto_focus,
+
+            .take_picture =              QCamera2HardwareInterface::take_picture,
+            .cancel_picture =            QCamera2HardwareInterface::cancel_picture,
+
+            .set_parameters =            QCamera2HardwareInterface::set_parameters,
+            .get_parameters =            QCamera2HardwareInterface::get_parameters,
+            .put_parameters =            QCamera2HardwareInterface::put_parameters,
+            .send_command =              QCamera2HardwareInterface::send_command,
+
+            .release =                   QCamera2HardwareInterface::release,
+            .dump =                      QCamera2HardwareInterface::dump,
+        };
+```
+继续看start_preview方法:
+
+``` C
+          /*===========================================================================
+           * FUNCTION   : start_preview
+           *
+           * DESCRIPTION: start preview
+           *
+           * PARAMETERS :
+           *   @device  : ptr to camera device struct
+           *
+           * RETURN     : int32_t type of status
+           *              NO_ERROR  -- success
+           *              none-zero failure code
+           *==========================================================================*/
+          int QCamera2HardwareInterface::start_preview(struct camera_device *device)
+          {
+              KPI_ATRACE_CAMSCOPE_CALL(CAMSCOPE_HAL1_START_PREVIEW);
+              int ret = NO_ERROR;
+              QCamera2HardwareInterface *hw =
+                  reinterpret_cast<QCamera2HardwareInterface *>(device->priv);
+              if (!hw) {
+                  LOGE("NULL camera device");
+                  return BAD_VALUE;
+              }
+              LOGI("[KPI Perf]: E PROFILE_START_PREVIEW camera id %d",
+                       hw->getCameraId());
+
+              hw->m_perfLockMgr.acquirePerfLockIfExpired(PERF_LOCK_START_PREVIEW);
+              hw->lockAPI();
+              qcamera_api_result_t apiResult;
+              qcamera_sm_evt_enum_t evt = QCAMERA_SM_EVT_START_PREVIEW;
+              uint32_t cam_type = CAM_TYPE_MAIN;
+              if (hw->isDualCamera()) {
+                  cam_type = MM_CAMERA_DUAL_CAM;
+              }
+              if (hw->isNoDisplayMode(cam_type)) {
+                  evt = QCAMERA_SM_EVT_START_NODISPLAY_PREVIEW;
+              }
+              ret = hw->processAPI(evt, NULL);
+              if (ret == NO_ERROR) {
+                  hw->waitAPIResult(evt, &apiResult);
+                  ret = apiResult.status;
+              }
+              hw->unlockAPI();
+              LOGI("[KPI Perf]: X ret = %d", ret);
+              return ret;
+          }
+```
+用qcamera_sm_evt_enum_t是一个枚举,用hw->processAPI处理,结果给apiResult,看processAPI方法:
+
+``` C
+           /*===========================================================================
+            * FUNCTION   : processAPI
+            *
+            * DESCRIPTION: process API calls from upper layer
+            *
+            * PARAMETERS :
+            *   @api         : API to be processed
+            *   @api_payload : ptr to API payload if any
+            *
+            * RETURN     : int32_t type of status
+            *              NO_ERROR  -- success
+            *              none-zero failure code
+            *==========================================================================*/
+           int QCamera2HardwareInterface::processAPI(qcamera_sm_evt_enum_t api, void *api_payload)
+           {
+               int ret = DEAD_OBJECT;
+
+               if (m_smThreadActive) {
+                   ret = m_stateMachine.procAPI(api, api_payload);
+               }
+
+               return ret;
+           }
+```
+转调给了m_stateMachine,含义是状态机,是一个QCameraStateMachine对象,继续看实现:
+
+``` C
+            /*===========================================================================
+             * FUNCTION   : procAPI
+             *
+             * DESCRIPTION: process incoming API request from framework layer.
+             *
+             * PARAMETERS :
+             *   @evt          : event to be processed
+             *   @api_payload  : API payload. Can be NULL if not needed.
+             *
+             * RETURN     : int32_t type of status
+             *              NO_ERROR  -- success
+             *              none-zero failure code
+             *==========================================================================*/
+            int32_t QCameraStateMachine::procAPI(qcamera_sm_evt_enum_t evt,
+                                                 void *api_payload)
+            {
+                qcamera_sm_cmd_t *node =
+                    (qcamera_sm_cmd_t *)malloc(sizeof(qcamera_sm_cmd_t));
+                if (NULL == node) {
+                    LOGE("No memory for qcamera_sm_cmd_t");
+                    return NO_MEMORY;
+                }
+
+                memset(node, 0, sizeof(qcamera_sm_cmd_t));
+                node->cmd = QCAMERA_SM_CMD_TYPE_API;
+                node->evt = evt;
+                node->evt_payload = api_payload;
+                if (api_queue.enqueue((void *)node)) {
+                    cam_sem_post(&cmd_sem);
+                    return NO_ERROR;
+                } else {
+                    LOGE("API enqueue failed API = %d", evt);
+                    free(node);
+                    return UNKNOWN_ERROR;
+                }
+            }
+```
+这里有一个api_queue队列处理api请求,找到队列处理过程:
+
+``` C
+            /*===========================================================================
+             * FUNCTION   : smEvtProcRoutine
+             *
+             * DESCRIPTION: Statemachine process thread routine to handle events
+             *              in different state.
+             *
+             * PARAMETERS :
+             *   @data    : ptr to QCameraStateMachine object
+             *
+             * RETURN     : none
+             *==========================================================================*/
+            void *QCameraStateMachine::smEvtProcRoutine(void *data)
+            {
+                int running = 1, ret;
+                QCameraStateMachine *pme = (QCameraStateMachine *)data;
+
+                LOGH("E");
+                do {
+                    do {
+                        ret = cam_sem_wait(&pme->cmd_sem);
+                        if (ret != 0 && errno != EINVAL) {
+                            LOGE("cam_sem_wait error (%s)",
+                                        strerror(errno));
+                            return NULL;
+                        }
+                    } while (ret != 0);
+
+                    // we got notified about new cmd avail in cmd queue
+                    // first check API cmd queue
+                    qcamera_sm_cmd_t *node = (qcamera_sm_cmd_t *)pme->api_queue.dequeue();
+                    if (node == NULL) {
+                        // no API cmd, then check evt cmd queue
+                        node = (qcamera_sm_cmd_t *)pme->evt_queue.dequeue();
+                    }
+                    if (node != NULL) {
+                        switch (node->cmd) {
+                        case QCAMERA_SM_CMD_TYPE_API:
+                            pme->stateMachine(node->evt, node->evt_payload);
+                            // API is in a way sync call, so evt_payload is managed by HWI
+                            // no need to free payload for API
+                            break;
+                        case QCAMERA_SM_CMD_TYPE_EVT:
+                            pme->stateMachine(node->evt, node->evt_payload);
+
+                            // EVT is async call, so payload need to be free after use
+                            free(node->evt_payload);
+                            node->evt_payload = NULL;
+                            break;
+                        case QCAMERA_SM_CMD_TYPE_EXIT:
+                            running = 0;
+                            break;
+                        default:
+                            break;
+                        }
+                        free(node);
+                        node = NULL;
+                    }
+                } while (running);
+                LOGH("X");
+                return NULL;
+            }
+```
+大概明白smEvtProcRoutine是一个周期性方法,在其中处理各种类型的命令,注释很清楚,QCAMERA_SM_CMD_TYPE_API是由HWI调用的,不需要自己清理返回数据,QCAMERA_SM_CMD_TYPE_EVT是异步调用的,用于其它事件(例如人脸返回等数据),需要清理返回数据,QCAMERA_SM_CMD_TYPE_EXIT是退出.
+``` C
+            /*===========================================================================
+             * FUNCTION   : stateMachine
+             *
+             * DESCRIPTION: finite state machine entry function. Depends on state,
+             *              incoming event will be handled differently.
+             *
+             * PARAMETERS :
+             *   @evt      : event to be processed
+             *   @payload  : event payload. Can be NULL if not needed.
+             *
+             * RETURN     : int32_t type of status
+             *              NO_ERROR  -- success
+             *              none-zero failure code
+             *==========================================================================*/
+            int32_t QCameraStateMachine::stateMachine(qcamera_sm_evt_enum_t evt, void *payload)
+            {
+                int32_t rc = NO_ERROR;
+                LOGL("m_state %d, event (%d)", m_state, evt);
+                switch (m_state) {
+                case QCAMERA_SM_STATE_PREVIEW_STOPPED:
+                    rc = procEvtPreviewStoppedState(evt, payload);
+                    break;
+                case QCAMERA_SM_STATE_PREVIEW_READY:
+                    rc = procEvtPreviewReadyState(evt, payload);
+                    break;
+                case QCAMERA_SM_STATE_PREVIEWING:
+                    rc = procEvtPreviewingState(evt, payload);
+                    break;
+                case QCAMERA_SM_STATE_PREPARE_SNAPSHOT:
+                    rc = procEvtPrepareSnapshotState(evt, payload);
+                    break;
+                case QCAMERA_SM_STATE_PIC_TAKING:
+                    rc = procEvtPicTakingState(evt, payload);
+                    break;
+                case QCAMERA_SM_STATE_RECORDING:
+                    rc = procEvtRecordingState(evt, payload);
+                    break;
+                case QCAMERA_SM_STATE_VIDEO_PIC_TAKING:
+                    rc = procEvtVideoPicTakingState(evt, payload);
+                    break;
+                case QCAMERA_SM_STATE_PREVIEW_PIC_TAKING:
+                    rc = procEvtPreviewPicTakingState(evt, payload);
+                    break;
+                default:
+                    break;
+                }
+
+
+                return rc;
+            }
+```
+在不同状态下对应的处理,如果在preview状态:
+``` C
+            int32_t QCameraStateMachine::procEvtPreviewingState(qcamera_sm_evt_enum_t evt,
+                                                                void *payload)
+            {
+                int32_t rc = NO_ERROR;
+                qcamera_api_result_t result;
+                memset(&result, 0, sizeof(qcamera_api_result_t));
+
+                LOGL("event (%d)", evt);
+                switch (evt) {
+                ...
+                case QCAMERA_SM_EVT_START_PREVIEW:
+                case QCAMERA_SM_EVT_START_NODISPLAY_PREVIEW:
+                {
+                     // no ops here
+                     LOGW("Already in previewing, no ops here to start preview");
+                     applyDelayedMsgs();
+                     rc = NO_ERROR;
+                     result.status = rc;
+                     result.request_api = evt;
+                     result.result_type = QCAMERA_API_RESULT_TYPE_DEF;
+                     m_parent->signalAPIResult(&result);
+                }
+                break;
+                 ...
+```
+调用m_parent的signalAPIResult返回结果,LOG也看到已经在preview状态,不需要操作.再看下procEvtPreviewStoppedState中的处理:
+``` C
+            case QCAMERA_SM_EVT_START_PREVIEW:
+                {
+                    rc = m_parent->waitDeferredWork(m_parent->mParamInitJob);
+                    if (NO_ERROR != rc) {
+                        LOGE("Param init deferred work failed");
+                    } else if (m_parent->mPreviewWindow == NULL) {
+                        rc = m_parent->preparePreview();
+                        if(rc == NO_ERROR) {
+                            // preview window is not set yet, move to previewReady state
+                            m_state = QCAMERA_SM_STATE_PREVIEW_READY;
+                        } else {
+                            LOGE("preparePreview failed");
+                        }
+                    } else {
+                        rc = m_parent->preparePreview();
+                        if (rc == NO_ERROR) {
+                            applyDelayedMsgs();
+                            rc = m_parent->startPreview();
+                            if (rc != NO_ERROR) {
+                                m_parent->unpreparePreview();
+                            } else {
+                                // start preview success, move to previewing state
+                                m_state = QCAMERA_SM_STATE_PREVIEWING;
+                            }
+                        }
+                    }
+                    result.status = rc;
+                    result.request_api = evt;
+                    result.result_type = QCAMERA_API_RESULT_TYPE_DEF;
+                    m_parent->signalAPIResult(&result);
+                }
+```
+判断m_parent->mPreviewWindow的状态进行了不同处理,m_parent是QCamera2HardwareInterface对象,通过这个状态机可能又调回startPreview,正常应该是调用preparePreview方法:
+
+``` C
+            /*===========================================================================
+             * FUNCTION   : preparePreview
+             *
+             * DESCRIPTION: add channels needed for preview
+             *
+             * PARAMETERS : none
+             *
+             * RETURN     : int32_t type of status
+             *              NO_ERROR  -- success
+             *              none-zero failure code
+             *==========================================================================*/
+            int32_t QCamera2HardwareInterface::preparePreview()
+            {
+                ATRACE_CAMSCOPE_CALL(CAMSCOPE_HAL1_PREPAREPREVIEW);
+                int32_t rc = NO_ERROR;
+
+                LOGI("E");
+                rc = mParameters.setStreamConfigure(false, false, false);
+                if (rc != NO_ERROR) {
+                    LOGE("setStreamConfigure failed %d", rc);
+                    return rc;
+                }
+                ...
+
+                LOGI("X rc = %d", rc);
+                return rc;
+            }
+```
+mParameters是QCameraParameterIntf对象,最后使用的是QCameraParameters对象,这里可以做很多配置操作.
+本层的话看到了setPreview方法的由camera_device_ops_t到QCamera2HardwareInterface的对应,再看到了状态机QCameraStateMachine,又能回到QCamera2HardwareInterface,再进入调用QCameraParameters获取参数等.
+
+# 总结
+
+整个setPreview方法从framework到hal层的调用步骤就完全走通了,借此对android的架构和相机的架构都更深入了解了.下一篇会分析相机api1的参数传递过程.

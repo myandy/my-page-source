@@ -14,14 +14,16 @@ tags:
 
 ## 帧动画实现
 一开始想到帧动画，让设计切好图，定好时间就ok了。代码很简单：
-  	
+
+``` java
     image.setImageResource(R.drawable.animal_totop);
     AnimationDrawable animationDrawable = (AnimationDrawable) image.getDrawable();
     animationDrawable.start();
-    
+```
 
 获取到AnimationDrawable，然后start就可以了。动画是这样写的：
 
+``` xml
 	<?xml version="1.0" encoding="utf-8"?><!--
 	根标签为animation-list，其中oneshot代表着是否只展示一遍，设置为false会不停的循环播放动画
 	根标签下，通过item标签对动画中的每一个图片进行声明
@@ -56,7 +58,7 @@ tags:
     </item>
 
 	</animation-list>
-
+```
 
 五张图片，每张展示200ms，然后空白2000ms，设置oneShot为false，就是会循环不停的播放。
 
@@ -64,6 +66,7 @@ tags:
 
 发现效果有点差，5帧的动画，当然啦。就想可以自定义View，让其移动并设置透明度，移动就是在onDraw时绘制不同的位置即可了。
 
+``` java
  	import android.content.Context;
     import android.graphics.Canvas;
     import android.graphics.Rect;
@@ -154,7 +157,7 @@ tags:
         }
 
     }
-
+```
 就重写了onMeasure()和 onDraw(), onDraw最后注意一个延迟刷新方法，postInvalidateDelayed()。
 自己绘制要控制好周期，位置，和透明度，这里图片是一个箭头，自己绘制了三次，因为要控制每一个的透明度。这些算的还算简单，自己在本子上画画调整下就可以了。
 这种实现连贯性就比帧动画好多了，也节省资源，省去多张图片。以后有相关需求一定要先想自己实现，不能太依赖设计直接给完整图。

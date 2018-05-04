@@ -1,0 +1,527 @@
+---
+title:      "Android8.0相机源码深入解析(三)"
+description:   "相机流程深入解析:hal到app数据传递"
+date:       2018-5-7 12:00:00
+author:     "安地"
+tags:
+      - Camera
+      - Android
+---
+
+# 正文
+
+上一篇介绍了app到hal层数据传递,本偏介绍hal到app的数据传递.
+## 数据传递场景
+
+app到hal层主要传递配置参数,hal到app传递数据用于哪些场景呢.Camera有很多回调方法,FaceDetection,onPreviewFrame,onPictureTaken等,这些明显是需要传回数据的.
+我们到Camera.java中找回调方法的使用位置:
+
+
+``` java
+           private class EventHandler extends Handler
+            {
+                private final Camera mCamera;
+
+                public EventHandler(Camera c, Looper looper) {
+                    super(looper);
+                    mCamera = c;
+                }
+
+                @Override
+                public void handleMessage(Message msg) {
+                    switch(msg.what) {
+                    case CAMERA_MSG_SHUTTER:
+                        if (mShutterCallback != null) {
+                            mShutterCallback.onShutter();
+                        }
+                        return;
+
+                    case CAMERA_MSG_RAW_IMAGE:
+                        if (mRawImageCallback != null) {
+                            mRawImageCallback.onPictureTaken((byte[])msg.obj, mCamera);
+                        }
+                        return;
+
+                    case CAMERA_MSG_COMPRESSED_IMAGE:
+                        if (mJpegCallback != null) {
+                            mJpegCallback.onPictureTaken((byte[])msg.obj, mCamera);
+                        }
+                        return;
+
+                    case CAMERA_MSG_PREVIEW_FRAME:
+                        PreviewCallback pCb = mPreviewCallback;
+                        if (pCb != null) {
+                            if (mOneShot) {
+                                // Clear the callback variable before the callback
+                                // in case the app calls setPreviewCallback from
+                                // the callback function
+                                mPreviewCallback = null;
+                            } else if (!mWithBuffer) {
+                                // We're faking the camera preview mode to prevent
+                                // the app from being flooded with preview frames.
+                                // Set to oneshot mode again.
+                                setHasPreviewCallback(true, false);
+                            }
+                            pCb.onPreviewFrame((byte[])msg.obj, mCamera);
+                        }
+                        return;
+
+                    case CAMERA_MSG_POSTVIEW_FRAME:
+                        if (mPostviewCallback != null) {
+                            mPostviewCallback.onPictureTaken((byte[])msg.obj, mCamera);
+                        }
+                        return;
+
+                    case CAMERA_MSG_FOCUS:
+                        AutoFocusCallback cb = null;
+                        synchronized (mAutoFocusCallbackLock) {
+                            cb = mAutoFocusCallback;
+                        }
+                        if (cb != null) {
+                            boolean success = msg.arg1 == 0 ? false : true;
+                            cb.onAutoFocus(success, mCamera);
+                        }
+                        return;
+
+                    case CAMERA_MSG_ZOOM:
+                        if (mZoomListener != null) {
+                            mZoomListener.onZoomChange(msg.arg1, msg.arg2 != 0, mCamera);
+                        }
+                        return;
+
+                    case CAMERA_MSG_PREVIEW_METADATA:
+                        if (mFaceListener != null) {
+                            mFaceListener.onFaceDetection((Face[])msg.obj, mCamera);
+                        }
+                        return;
+
+                    case CAMERA_MSG_ERROR :
+                        Log.e(TAG, "Error " + msg.arg1);
+                        if (mErrorCallback != null) {
+                            mErrorCallback.onError(msg.arg1, mCamera);
+                        }
+                        return;
+
+                    case CAMERA_MSG_FOCUS_MOVE:
+                        if (mAutoFocusMoveCallback != null) {
+                            mAutoFocusMoveCallback.onAutoFocusMoving(msg.arg1 == 0 ? false : true, mCamera);
+                        }
+                        return;
+
+                    default:
+                        Log.e(TAG, "Unknown message type " + msg.what);
+                        return;
+                    }
+                }
+            }
+```
+
+
+看到各种数据传递,包括预览,拍照,人脸,错误,聚焦等,用一个Handler获取消息,obj传递数据,我们根据人脸识别参数CAMERA_MSG_PREVIEW_METADATA来深入分析.
+
+## jni到native library
+找到这个消息是哪里发出来的,按照之前经验要去jni中找,没有找到CAMERA_MSG_PREVIEW_METADATA的传递,但在android_hardware_Camera.cpp中找到了传递人脸数据的地方:
+
+``` C
+void JNICameraContext::postMetadata(JNIEnv *env, int32_t msgType, camera_frame_metadata_t *metadata)
+{
+    jobjectArray obj = NULL;
+    obj = (jobjectArray) env->NewObjectArray(metadata->number_of_faces,
+                                             mFaceClass, NULL);
+    if (obj == NULL) {
+        ALOGE("Couldn't allocate face metadata array");
+        return;
+    }
+
+    for (int i = 0; i < metadata->number_of_faces; i++) {
+        jobject face = env->NewObject(mFaceClass, fields.face_constructor);
+        env->SetObjectArrayElement(obj, i, face);
+
+        jobject rect = env->NewObject(mRectClass, fields.rect_constructor);
+        env->SetIntField(rect, fields.rect_left, metadata->faces[i].rect[0]);
+        env->SetIntField(rect, fields.rect_top, metadata->faces[i].rect[1]);
+        env->SetIntField(rect, fields.rect_right, metadata->faces[i].rect[2]);
+        env->SetIntField(rect, fields.rect_bottom, metadata->faces[i].rect[3]);
+        env->SetObjectField(face, fields.face_rect, rect);
+        env->SetIntField(face, fields.face_score, metadata->faces[i].score);
+
+        bool optionalFields = metadata->faces[i].id != 0
+            && metadata->faces[i].left_eye[0] != -2000 && metadata->faces[i].left_eye[1] != -2000
+            && metadata->faces[i].right_eye[0] != -2000 && metadata->faces[i].right_eye[1] != -2000
+            && metadata->faces[i].mouth[0] != -2000 && metadata->faces[i].mouth[1] != -2000;
+        if (optionalFields) {
+            int32_t id = metadata->faces[i].id;
+            env->SetIntField(face, fields.face_id, id);
+
+            jobject leftEye = env->NewObject(mPointClass, fields.point_constructor);
+            env->SetIntField(leftEye, fields.point_x, metadata->faces[i].left_eye[0]);
+            env->SetIntField(leftEye, fields.point_y, metadata->faces[i].left_eye[1]);
+            env->SetObjectField(face, fields.face_left_eye, leftEye);
+            env->DeleteLocalRef(leftEye);
+
+            jobject rightEye = env->NewObject(mPointClass, fields.point_constructor);
+            env->SetIntField(rightEye, fields.point_x, metadata->faces[i].right_eye[0]);
+            env->SetIntField(rightEye, fields.point_y, metadata->faces[i].right_eye[1]);
+            env->SetObjectField(face, fields.face_right_eye, rightEye);
+            env->DeleteLocalRef(rightEye);
+
+            jobject mouth = env->NewObject(mPointClass, fields.point_constructor);
+            env->SetIntField(mouth, fields.point_x, metadata->faces[i].mouth[0]);
+            env->SetIntField(mouth, fields.point_y, metadata->faces[i].mouth[1]);
+            env->SetObjectField(face, fields.face_mouth, mouth);
+            env->DeleteLocalRef(mouth);
+
+            if (mIsExtendedFace) {
+                env->SetIntField(face, fields.face_sm_degree, metadata->faces[i].smile_degree);
+                env->SetIntField(face, fields.face_sm_score, metadata->faces[i].smile_score);
+                env->SetIntField(face, fields.face_blink_detected, metadata->faces[i].blink_detected);
+                env->SetIntField(face, fields.face_recognised, metadata->faces[i].face_recognised);
+                env->SetIntField(face, fields.face_gaze_angle, metadata->faces[i].gaze_angle);
+                env->SetIntField(face, fields.face_updown_dir, metadata->faces[i].updown_dir);
+                env->SetIntField(face, fields.face_leftright_dir, metadata->faces[i].leftright_dir);
+                env->SetIntField(face, fields.face_roll_dir, metadata->faces[i].roll_dir);
+                env->SetIntField(face, fields.face_leye_blink, metadata->faces[i].leye_blink);
+                env->SetIntField(face, fields.face_reye_blink, metadata->faces[i].reye_blink);
+                env->SetIntField(face, fields.face_left_right_gaze, metadata->faces[i].left_right_gaze);
+                env->SetIntField(face, fields.face_top_bottom_gaze, metadata->faces[i].top_bottom_gaze);
+            }
+        }
+
+        env->DeleteLocalRef(face);
+        env->DeleteLocalRef(rect);
+    }
+    env->CallStaticVoidMethod(mCameraJClass, fields.post_event,
+            mCameraJObjectWeak, msgType, 0, 0, obj);
+    env->DeleteLocalRef(obj);
+}
+```
+这里做了一次jni中C到java的数据转换,把C对象转成了java对象的Face数据,然后发送消息到Camera.java的handler中.
+继续找CAMERA_MSG_PREVIEW_METADATA,在CameraClient中找到了:
+``` C
+void CameraClient::dataCallback(int32_t msgType,
+        const sp<IMemory>& dataPtr, camera_frame_metadata_t *metadata, void* user) {
+    LOG2("dataCallback(%d)", msgType);
+
+    sp<CameraClient> client = getClientFromCookie(user);
+    if (client.get() == nullptr) return;
+
+    if (!client->lockIfMessageWanted(msgType)) return;
+    if (dataPtr == 0 && metadata == NULL) {
+        ALOGE("Null data returned in data callback");
+        client->handleGenericNotify(CAMERA_MSG_ERROR, UNKNOWN_ERROR, 0);
+        return;
+    }
+
+    switch (msgType & ~CAMERA_MSG_PREVIEW_METADATA) {
+        case CAMERA_MSG_PREVIEW_FRAME:
+            client->handlePreviewData(msgType, dataPtr, metadata);
+            break;
+        case CAMERA_MSG_POSTVIEW_FRAME:
+            client->handlePostview(dataPtr);
+            break;
+        case CAMERA_MSG_RAW_IMAGE:
+            client->handleRawPicture(dataPtr);
+            break;
+        case CAMERA_MSG_COMPRESSED_IMAGE:
+            client->handleCompressedPicture(dataPtr);
+            break;
+        default:
+            client->handleGenericData(msgType, dataPtr, metadata);
+            break;
+    }
+}
+```
+这里是把CAMERA_MSG_PREVIEW_METADATA消息屏蔽了,不是我们想要的.
+在FrameProcessor找到了使用地方,FrameProcessor在libcameraservice的api1目录:
+
+``` C
+    void FrameProcessor::callbackFaceDetection(const sp<Camera2Client>& client,
+                                         const camera_frame_metadata &metadata) {
+
+        camera_frame_metadata *metadata_ptr =
+            const_cast<camera_frame_metadata*>(&metadata);
+
+        /**
+         * Filter out repeated 0-face callbacks,
+         * but not when the last frame was >0
+         */
+        if (metadata.number_of_faces != 0 ||
+            mLastFrameNumberOfFaces != metadata.number_of_faces) {
+
+            Camera2Client::SharedCameraCallbacks::Lock
+                l(client->mSharedCameraCallbacks);
+            if (l.mRemoteCallback != NULL) {
+                l.mRemoteCallback->dataCallback(CAMERA_MSG_PREVIEW_METADATA,
+                                                NULL,
+                                                metadata_ptr);
+            }
+        }
+
+        mLastFrameNumberOfFaces = metadata.number_of_faces;
+    }
+```
+    在FrameProcessor找到processFaceDetect调用callbackFaceDetection,processSingleFrame调用callbackFaceDetection,FrameProcessorBase::processNewFrames调用processSingleFrame.
+    然后看processNewFrames:
+```C
+    bool FrameProcessorBase::threadLoop() {
+        status_t res;
+
+        sp<CameraDeviceBase> device;
+        {
+            device = mDevice.promote();
+            if (device == 0) return false;
+        }
+
+        res = device->waitForNextFrame(kWaitDuration);
+        if (res == OK) {
+            processNewFrames(device);
+        } else if (res != TIMED_OUT) {
+            ALOGE("FrameProcessorBase: Error waiting for new "
+                    "frames: %s (%d)", strerror(-res), res);
+        }
+
+        return true;
+    }
+```
+FrameProcessorBase是一个循环,找到启动地方:
+
+``` C
+    template<typename TProviderPtr>
+    status_t CameraDeviceClient::initializeImpl(TProviderPtr providerPtr) {
+        ATRACE_CALL();
+        status_t res;
+
+        res = Camera2ClientBase::initialize(providerPtr);
+        if (res != OK) {
+            return res;
+        }
+
+        String8 threadName;
+        mFrameProcessor = new FrameProcessorBase(mDevice);
+        threadName = String8::format("CDU-%s-FrameProc", mCameraIdStr.string());
+        mFrameProcessor->run(threadName.string());
+
+        mFrameProcessor->registerListener(FRAME_PROCESSOR_LISTENER_MIN_ID,
+                                          FRAME_PROCESSOR_LISTENER_MAX_ID,
+                                          /*listener*/this,
+                                          /*sendPartials*/true);
+
+        return OK;
+    }
+```
+CameraDeviceClient在api2的包里,api2走这部分逻辑,api1部分在Camera2Client找到了:
+
+``` C
+        template<typename TProviderPtr>
+        status_t Camera2Client::initializeImpl(TProviderPtr providerPtr)
+        {
+            ATRACE_CALL();
+            ALOGV("%s: Initializing client for camera %d", __FUNCTION__, mCameraId);
+            status_t res;
+
+            res = Camera2ClientBase::initialize(providerPtr);
+            if (res != OK) {
+                return res;
+            }
+
+            {
+            ...
+            mFrameProcessor = new FrameProcessor(mDevice, this);
+            threadName = String8::format("C2-%d-FrameProc",
+                    mCameraId);
+            mFrameProcessor->run(threadName.string());
+            ...
+```
+
+
+重新理下整个流程,不管api2的部分,在Camera2Client初始化时启动FrameProcessor的线程,给FrameProcessor绑定一个device,FrameProcessor线程调用processNewFrames,processNewFrames调用processSingleFrame,processSingleFrame调用callbackFaceDetection,然后通过CameraClient发出消息CAMERA_MSG_PREVIEW_METADATA消息到app层,触发FaceDetection的回调.
+api2的不同点就是通过CameraDeviceClient,没有使用Camera2Client.通过包区分API.
+但我们还没看到实际的人脸识别方法和数据传递,这些肯定是在hal层,继续数据传递代码.
+
+
+## 从native到hal层
+
+看processNewFrames方法:
+``` C
+    void FrameProcessorBase::processNewFrames(const sp<CameraDeviceBase> &device) {
+        status_t res;
+        ATRACE_CALL();
+        CaptureResult result;
+
+        ALOGV("%s: Camera %s: Process new frames", __FUNCTION__, device->getId().string());
+
+        while ( (res = device->getNextResult(&result)) == OK) {
+
+            // TODO: instead of getting frame number from metadata, we should read
+            // this from result.mResultExtras when CameraDeviceBase interface is fixed.
+            camera_metadata_entry_t entry;
+
+            entry = result.mMetadata.find(ANDROID_REQUEST_FRAME_COUNT);
+            if (entry.count == 0) {
+                ALOGE("%s: Camera %s: Error reading frame number",
+                        __FUNCTION__, device->getId().string());
+                break;
+            }
+            ATRACE_INT("cam2_frame", entry.data.i32[0]);
+
+            if (!processSingleFrame(result, device)) {
+                break;
+            }
+
+            if (!result.mMetadata.isEmpty()) {
+                Mutex::Autolock al(mLastFrameMutex);
+                mLastFrame.acquire(result.mMetadata);
+            }
+        }
+        if (res != NOT_ENOUGH_DATA) {
+            ALOGE("%s: Camera %s: Error getting next frame: %s (%d)",
+                    __FUNCTION__, device->getId().string(), strerror(-res), res);
+            return;
+        }
+
+        return;
+    }
+```
+在一个while循环里通过device的getNextResult方法获取数据,然后送到processSingleFrame里.
+获取数据的是device->getNextResult方法,这个定义在devices3里:
+
+``` C
+    status_t Camera3Device::getNextResult(CaptureResult *frame) {
+        ATRACE_CALL();
+        Mutex::Autolock l(mOutputLock);
+
+        if (mResultQueue.empty()) {
+            return NOT_ENOUGH_DATA;
+        }
+
+        if (frame == NULL) {
+            ALOGE("%s: argument cannot be NULL", __FUNCTION__);
+            return BAD_VALUE;
+        }
+
+        CaptureResult &result = *(mResultQueue.begin());
+        frame->mResultExtras = result.mResultExtras;
+        frame->mMetadata.acquire(result.mMetadata);
+        mResultQueue.erase(mResultQueue.begin());
+
+        return OK;
+    }
+```
+    mResultQueue是一个队列,获取到一个后然后使用,最后擦除.接下来找mResultQueue的调用:
+``` C
+    void Camera3Device::insertResultLocked(CaptureResult *result,
+            uint32_t frameNumber) {
+        if (result == nullptr) return;
+
+        camera_metadata_t *meta = const_cast<camera_metadata_t *>(
+                result->mMetadata.getAndLock());
+        set_camera_metadata_vendor_id(meta, mVendorTagId);
+        result->mMetadata.unlock(meta);
+
+        if (result->mMetadata.update(ANDROID_REQUEST_FRAME_COUNT,
+                (int32_t*)&frameNumber, 1) != OK) {
+            SET_ERR("Failed to set frame number %d in metadata", frameNumber);
+            return;
+        }
+
+        if (result->mMetadata.update(ANDROID_REQUEST_ID, &result->mResultExtras.requestId, 1) != OK) {
+            SET_ERR("Failed to set request ID in metadata for frame %d", frameNumber);
+            return;
+        }
+
+        // Valid result, insert into queue
+        List<CaptureResult>::iterator queuedResult =
+                mResultQueue.insert(mResultQueue.end(), CaptureResult(*result));
+        ALOGVV("%s: result requestId = %" PRId32 ", frameNumber = %" PRId64
+               ", burstId = %" PRId32, __FUNCTION__,
+               queuedResult->mResultExtras.requestId,
+               queuedResult->mResultExtras.frameNumber,
+               queuedResult->mResultExtras.burstId);
+
+        mResultSignal.signal();
+    }
+```
+    insertResultLocked中有mResultQueue的插入方法,继续查找调用.找到hardware方法processCaptureResult,其调用过程是
+    hardware::processCaptureResult->Camera3Device::processOneCaptureResultLocked->Camera3Device::sendPartialCaptureResult
+    ->Camera3Device::insertResultLocked->Camera3Device::insertResultLocked.
+    hardware::processCaptureResult方法:
+``` C
+    // Only one processCaptureResult should be called at a time, so
+    // the locks won't block. The locks are present here simply to enforce this.
+    hardware::Return<void> Camera3Device::processCaptureResult(
+            const hardware::hidl_vec<
+                    hardware::camera::device::V3_2::CaptureResult>& results) {
+        // Ideally we should grab mLock, but that can lead to deadlock, and
+        // it's not super important to get up to date value of mStatus for this
+        // warning print, hence skipping the lock here
+        if (mStatus == STATUS_ERROR) {
+            // Per API contract, HAL should act as closed after device error
+            // But mStatus can be set to error by framework as well, so just log
+            // a warning here.
+            ALOGW("%s: received capture result in error state.", __FUNCTION__);
+        }
+
+        if (mProcessCaptureResultLock.tryLock() != OK) {
+            // This should never happen; it indicates a wrong client implementation
+            // that doesn't follow the contract. But, we can be tolerant here.
+            ALOGE("%s: callback overlapped! waiting 1s...",
+                    __FUNCTION__);
+            if (mProcessCaptureResultLock.timedLock(1000000000 /* 1s */) != OK) {
+                ALOGE("%s: cannot acquire lock in 1s, dropping results",
+                        __FUNCTION__);
+                // really don't know what to do, so bail out.
+                return hardware::Void();
+            }
+        }
+        for (const auto& result : results) {
+            processOneCaptureResultLocked(result);
+        }
+        mProcessCaptureResultLock.unlock();
+        return hardware::Void();
+    }
+```
+    这里获取了一个锁,然后处理捕获的结果,最后释放锁.hardware::processCaptureResult就是hidl方法了,果然在ICameraDeviceSession.hal里面找到了定义:
+``` C
+        processCaptureRequest(vec<CaptureRequest> requests,
+                vec<BufferCache> cachesToRemove)
+                generates (Status status, uint32_t numRequestProcessed);
+```
+    在ICameraDeviceSession.cpp里面可以看到方法的实现:
+``` C
+    Return<void> CameraDeviceSession::processCaptureRequest(
+            const hidl_vec<CaptureRequest>& requests,
+            const hidl_vec<BufferCache>& cachesToRemove,
+            ICameraDeviceSession::processCaptureRequest_cb _hidl_cb)  {
+        updateBufferCaches(cachesToRemove);
+
+        uint32_t numRequestProcessed = 0;
+        Status s = Status::OK;
+        for (size_t i = 0; i < requests.size(); i++, numRequestProcessed++) {
+            s = processOneCaptureRequest(requests[i]);
+            if (s != Status::OK) {
+                break;
+            }
+        }
+
+        if (s == Status::OK && requests.size() > 1) {
+            mResultBatcher.registerBatch(requests);
+        }
+
+        _hidl_cb(s, numRequestProcessed);
+        return Void();
+    }
+```
+
+
+# 总结
+
+总结一下整体流程:
+1. CameraServer从hal层调用processCaptureRequest,发出一个CaptureResult到Camera3Device的mResultQueue队列中
+2. 在FrameProcessorBase的线程里等待新的frame,然后调用processNewFrames处理每一帧
+3. 在processNewFrames中循环获取mResultQueue的最新结果,通过processSingleFrame处理,处理调用callbackFaceDetection发送到CameraClient
+4. callbackFaceDetection发出CAMERA_MSG_PREVIEW_METADATA的消息和metadata数据
+5. JniContext使用postMetadata把消息发送到framework层
+6. Camera的EventHandler收到消息,通过mFaceListener回调到app层
+
+这个流程走下来hal层到app的数据调用基本清楚了,所有的拍照,人脸,预览的数据都是如此传递的.但我们还不清楚CameraServer的整体流程,相机服务什么启动,这些数据从哪里捕获,什么时候下发的.
+我们下一篇分析相机启动的流程.

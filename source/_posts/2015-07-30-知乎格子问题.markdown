@@ -69,6 +69,7 @@ at Test.main(Test.java:10)
 ## 源码
 非常简单的代码相信会点的人都能看懂，写得很水，欢迎指教
 
+``` java
   	
 	import java.util.Random;
 
@@ -120,3 +121,4 @@ at Test.main(Test.java:10)
 
     }
 
+```

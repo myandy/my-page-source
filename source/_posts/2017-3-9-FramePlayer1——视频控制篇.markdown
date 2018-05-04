@@ -25,7 +25,7 @@ MoviePlayer中线程开始后就不间断播放，自己控制速度，然后给
 
 
 初始化线程和消息队列，接受两个消息开始播放和播放一帧：
-
+``` java
         @Override
         public void run() {
             // Establish a Looper for this thread, and define a Handler for it.
@@ -55,10 +55,10 @@ MoviePlayer中线程开始后就不间断播放，自己控制速度，然后给
                 }
             }
         }
-
+```
 
 启动播放器，解封装和解码，然后启动一个TimerTask
-
+``` java
      private void play() throws IOException {
             if (!sourceFile.canRead()) {
                 throw new FileNotFoundException("Unable to read " + sourceFile);
@@ -91,9 +91,9 @@ MoviePlayer中线程开始后就不间断播放，自己控制速度，然后给
                 destroyExtractor();
             }
         }
-
+```
  TimerTask发送消息到播放线程播放一帧，isRunning用于控制暂停继续，nextFrame方法可以直接播放下一帧：
-
+``` java
             public void nextFrame() {
                 mLocalHandler.sendMessage(mLocalHandler.obtainMessage(MSG_PLAY_PROGRESS, frame++, 0));
             }
@@ -106,10 +106,10 @@ MoviePlayer中线程开始后就不间断播放，自己控制速度，然后给
                     }
                 }
             }
-
+```
 
 播放一帧，MediaCodec分读取和输出队列，每次都只操作一帧：
-
+``` java
         private void doExtract(int frame) {
                 ByteBuffer inputBuffer;
                 if (mMediaCodec == null) {
@@ -154,8 +154,9 @@ MoviePlayer中线程开始后就不间断播放，自己控制速度，然后给
                     }
                 }
             }
+```
 使用很简单，用一个SurfaceView addCallback然后就可以创建一个FramePlayer，不设置帧率的话就会使用视频本身的帧率，详细可以参照工程代码：
-
+``` java
      @Override
         public void surfaceCreated(SurfaceHolder holder) {
             if (framePlayer == null) {
@@ -176,7 +177,7 @@ MoviePlayer中线程开始后就不间断播放，自己控制速度，然后给
                 });
             }
         }
-
+```
 ## 后记
 
 Android真是一个玩具，不过现在Google对权限控制越来越严格了。

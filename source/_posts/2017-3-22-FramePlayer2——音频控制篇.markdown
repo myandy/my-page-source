@@ -18,7 +18,7 @@ tags:
 ## 代码解析
 
 先解封装和配置MediaCodec和AudioTrack，其中sampleRate就是脉冲频率，乘以一个视频原始帧率和播放帧率比例就达到了和视频保持一样的速度。最后起一个音频播放线程单独去播放。
-
+``` java
             mAudioExtractor = new MediaExtractor();
             mAudioExtractor.setDataSource(sourceFile.toString());
             mAudioTrackIndex = selectAudioTrack(mAudioExtractor);
@@ -66,9 +66,9 @@ tags:
                 mAudioPlayTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
 
             }
-
+```
 AudioPlayTask只做一件事，doAudio中在while循环中解码播放，解码读入读出和视频解析很相似，不过最后需要调用audioTrack.write来发出声音
-
+``` java
     /**
      * AsyncTask that takes care of running the decode/playback loop
      */
@@ -208,7 +208,7 @@ AudioPlayTask只做一件事，doAudio中在while循环中解码播放，解码�
             }
         }
     }
-
+```
 ## 后记
 
 音频变速两倍差异后就已经不能入耳，所以网易云课堂提供的变速只有1.25和1.5，视频更大的变速播放可以用来扫描内容，自己拿来玩玩还是挺有意思的。项目代码不够完善，只是作为玩具和研究。

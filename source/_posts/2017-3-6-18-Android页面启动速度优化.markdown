@@ -16,7 +16,7 @@ tags:
 应用有多个进程的情况，判断进程名称做对应初始化。
 
 判断进程名称方法：
-
+``` java
     public static String getCurrentProcessName(Context context) {
             String processName = null;
             ActivityManager actMgr = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
@@ -34,20 +34,20 @@ tags:
             }
             return processName;
         }
-
+```
 ### Activity优化
 
 1.最基本的是布局优化，简化布局层级，优化过度绘制。
 2.BaseActivity的优化，BaseActivity很多东西可能在当前activity中都用不到，计算消耗时间作对应优化。
 3.提前启动耗时加载项，在super.onCreate之前启动耗时加载线程。
 4.在界面加载完毕后再做额外加载项：
-
+``` java
      getWindow().getDecorView().post(new Runnable() {
                 @Override
                 public void run() {
                 }
             });
-
+```
 如果有fragment的界面，优化目标是界面完全显示的话就要在onCreate时加加载，优化目标是activity开始显示的话可以只加载一个loading view。
 
 ### Fragment优化

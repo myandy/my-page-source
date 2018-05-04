@@ -15,6 +15,7 @@ tags:
 
 ## 源码
 
+``` python
 	import urllib.request as request
     import urllib.parse as parse
     import string
@@ -55,3 +56,4 @@ tags:
     url = "http://www.zhihu.com/question/35874887"
 
     baidu_zhihu(url)
+```

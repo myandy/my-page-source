@@ -16,7 +16,7 @@ tags:
 ### 监听下载状态
 
 由于下载库是独立完备的，没有自带下载监听，只有一个多项任务刷新通知栏的地方，不方便修改，还是自己写个监听数据库单项刷新的方法。继承ContentObserver监听数据库，其中我发现单项数据修改时uri尾数为数字，即下载id，否则则尾数不带数字，由此可以区分是首次下载还是更新进度。
-
+``` java
     public class DownloadContentObserver extends ContentObserver {
     
         private Context mContext;
@@ -79,17 +79,17 @@ tags:
     
     
     } 
-
+```
 注册ContentObserver，这里需要知道监听数据库的uri。
-     
+``` java
      DownloadContentObserver downloadContentObserver = new DownloadContentObserver(mContext,  handler);
      mContext.getContentResolver().registerContentObserver(allDownloadsContentUri, true, downloadContentObserver);
-
+```
 ### 使用EventBus
 
 在列表页要接收下载监听的方法，为了代码方便以及可读性，我用EventBus转发了一次，需要使用的地方监听对应事件就行了。
 
-
+``` java
         handler = new Handler(looper) {
             @Override
             public void handleMessage(Message msg) {
@@ -102,9 +102,9 @@ tags:
                 }
             }
         };
-
+```
 ### 在列表页处理事件
-
+``` java
       @Subscribe
         public void onEventMainThread(DownloadStartEvent event) {
             mAdapter.notifyDataSetChanged();
@@ -121,14 +121,14 @@ tags:
                 mAdapter.notifyItemChanged(position, event.info);
             }
         }
-        
+```
  DownloadStartEvent因为不知道下载项，就只能全刷新，DownloadProgressEvent时根据下载路径找到对应本地数据，因为我们有两个表，一个本地内容表，一个下载表，找到本地数据后根据本地数据库中的id对比列表数据看是否在这个列表里显示，是就刷新对应项。
  mAdapter.notifyItemChanged(position, event.info);里面有两个参数，第二个是payload，解释是这样的：@param payload Optional parameter, use null to identify a "full" update，payload 是null则表示是完全的刷新，我们这里不用完全刷新，我选择把下载信息传入。
  
 ### payload使用
  
  在adapter中使用payload，我这里封装的原因把逻辑放入holder中处理，然后就随意处理了，payload不为空时就刷新下载相关部分就行了，关键在于不用刷新item的图片了，会流畅很多，下载项的数据就是payload。
- 
+``` java
         @Override
         public void onBindViewHolder(H holder, int position) {
             holder.setIndex(position);
@@ -144,8 +144,7 @@ tags:
                 holder.bindData(getItem(position));
             }
         }
- 
- 
+```
 
 
 ## 总结

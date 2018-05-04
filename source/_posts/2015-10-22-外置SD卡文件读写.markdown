@@ -29,6 +29,7 @@ this.val$context.startActivityForResult(new Intent("android.intent.action.OPEN_D
 
 这个Intent就是进入文件目录，再找回来在OnActivityResult的操作：
 
+``` java
 	@Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
@@ -45,17 +46,18 @@ this.val$context.startActivityForResult(new Intent("android.intent.action.OPEN_D
                     }
                 }
         }
-
-
         super.onActivityResult(requestCode, resultCode, data);
     }
+
+```
 这开始就是贴的是我改完后的自己代码了，清楚点，都是差不多意思。回来成功选择后，先判断是不是SD卡，不是就继续弹Dialog，是就保存treeUri，就是外置SD的文档Uri。
 这个Uri和普通Uri是不一样的，打印出来是这样的：
  content://com.android.externalstorage.documents/tree/6635-3265%3A
 中间有个tree。
 
 再去找文件操作时是怎么样的，发现外置SD卡都是通过DocumentFile进行文件写的。先根据之前保存的SD卡uri获取根DocumentFile，在一层一层获取子DocumentFile。
- 		
+
+``` java
 	public static DocumentFile getDocumentFilePath(Context context, String path, boolean createDirectories) {
         DocumentFile document = DocumentFile.fromTreeUri(context, Uri.parse(SDUtils.getSdCardUriPreferences(context)));
         Logger.get().e( document.getName()+":"+SDUtils.getSdCardUriPreferences(context));
@@ -78,11 +80,13 @@ this.val$context.startActivityForResult(new Intent("android.intent.action.OPEN_D
         }
         return document;
     }
+```
 path是要获取文件的路径，createDirectories是是否要新建，false用于获取DocumentFile执行删除操作，true用于新建文件。遍历不从0开始是因为path的是绝对路径，前面SD卡的路径不需要，从SD卡的第一层目录开始遍历。
 有了思路就可以更好的找方法了，再在google搜DocumentFile，SD卡相关的，在stackOverFlow找到了这个：
 http://stackoverflow.com/questions/26744842/how-to-use-the-new-sd-card-access-api-presented-for-lollipop
 改写了其提供的一些方法，下面的copyFile就是。target可写就直接写，android5通过DucumentFile获取outStream,4.4由contentResolve通过普通Uri获取到输出流。然后写到输出流中。
 
+``` java
   	public static boolean copyFile(Context context, final File source, final File target) {
         FileInputStream inStream = null;
         OutputStream outStream = null;
@@ -147,7 +151,7 @@ http://stackoverflow.com/questions/26744842/how-to-use-the-new-sd-card-access-ap
         }
         return true;
     }
-
+```
 ##	总结
 
 其实就是通过DocumentFile的方法实现对外置SD卡文件的操作，关键是步骤获取TreeUri，通过DocumentFile.fromTreeUri方法获取到想要找的文件树对象，从而实现文件操作。

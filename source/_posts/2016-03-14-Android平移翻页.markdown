@@ -22,6 +22,7 @@ tags:
 
 设置adapter代码：
 
+``` java
 	public void setAdapter(PagerAdapter adapter, int index)
     {
         removeAllViews();
@@ -37,9 +38,10 @@ tags:
         addView(nextPage, 0, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
     }	
-
+```
 计算大小和处理view位置：
 
+``` java
  	@Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec)
     {
@@ -66,11 +68,11 @@ tags:
         nextPage.layout(nextPageLeft, 0, nextPageLeft + nextPage.getMeasuredWidth(), nextPage.getMeasuredHeight());
         invalidate();
     }
-
+```
 
 这里都很清晰，按每一页的位置进行绘制，关键是位置如何计算了，在onTouchEvent里面：
 
-
+``` java
  	@Override
     public boolean onTouchEvent(MotionEvent event)
     {
@@ -185,14 +187,14 @@ tags:
             }
         return true;
     }
-
+```
 
 这里比较长，还是很多其它处理，比如边界，速度还有停止滑动等，这些都不用管，只看移动位置就行了，只有MotionEvent.ACTION_MOVE里的一些代码。
 先判断是当前页滑动还是上一页滑动，然后记录移动距离及移动状态，最后requestLayout重新布局。
 
 明显上面还少了页面位置的计算，还有一个是页面的切换过程。
 上面事件处理中有个timer：
-
+``` java
 	 class MyTimerTask extends TimerTask
     {
         Handler handler;
@@ -209,8 +211,9 @@ tags:
         }
 
     }
+```
 一直在发送消息处理到handler中，hander代码如下：
-
+``` java
 	 Handler updateHandler = new Handler()
     {
 
@@ -265,12 +268,12 @@ tags:
         }
 
     };
-
+```
 如果在移动状态才进行判断处理，根据当前页和或前一页的位置及移动的速度，计算页面位置及是否切换完成。
 
 
 右滑当前页过程就是计算页面位置，判断是否滑动底，是就加一页：
-
+``` java
     moveRight(CURR);
     if (currPageLeft == mWidth)
     {
@@ -278,10 +281,10 @@ tags:
         // 翻过一页，在底下添加一页，把最上层页面移除
         addNextPage();
     }
-
+```
           
 向右滑动位置的计算，根据速度计算出左右位置：
-
+``` java
     /**
      * 向右滑。注意可以滑动的页面只有当前页和前一页
      * 
@@ -305,7 +308,7 @@ tags:
                 break;
         }
     }
-
+```
 其它位置滑动也如此。翻页的基本逻辑过程都介绍完成了。
 
 ## 事件冲突处理
@@ -313,7 +316,7 @@ tags:
 这里就简单很多了，因为这里页面要同时上下滑和左右滑。就在onInterceptTouchEvent做方向上的判断，左右滑动时才去拦截事件就行了。关键点在ACTION_DOWN时的处理，只有在ACTION_MOVE时才去拦截，所以父控件自己的onTouchEvent的down事件是接受不到的，必须在onInterceptTouchEvent中就处理，这里是需要按下时的x坐标，必须此时就记录下来。
 
 代码如下：
-
+``` java
 	 @Override
     public boolean onInterceptTouchEvent(MotionEvent ev)
     {
@@ -361,7 +364,7 @@ tags:
         return handled;
 
     }
-
+```
 
 ## 后记 
 

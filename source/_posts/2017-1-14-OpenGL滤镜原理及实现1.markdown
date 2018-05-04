@@ -58,7 +58,7 @@ Y坐标是原图的RGB，通过这个XY坐标去取下图overlayMap图对应的�
 这个实例是Hudson滤镜，blackboard结合overlayMap实现了背景叠加，map实现了颜色滤镜，使用的是上面的255*3的颜色查找表，三种颜色中点分别是1/6,1/2，5/6，故在这些位置上取对应颜色。
 
 ### 顶点着色器
-
+``` glsl
     attribute vec4 position;
     attribute vec4 inputTextureCoordinate;
     varying vec2 textureCoordinate;
@@ -68,10 +68,10 @@ Y坐标是原图的RGB，通过这个XY坐标去取下图overlayMap图对应的�
         gl_Position = position;
         textureCoordinate = inputTextureCoordinate.xy;
     }
-
+```
 
 ### 片段着色器
-
+``` glsl
     precision mediump float;
     varying mediump vec2 textureCoordinate;
     uniform sampler2D inputImageTexture;   //orginalImage
@@ -99,7 +99,7 @@ Y坐标是原图的RGB，通过这个XY坐标去取下图overlayMap图对应的�
          gl_FragColor = mapped;
 
      }
-
+```
 ## 效果图
 
 ![Alt text](/img/post_filter_7.png)

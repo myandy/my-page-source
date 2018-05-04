@@ -16,7 +16,7 @@ tags:
 
 
 ### VrVideoView
-
+``` java
     public class VrVideoView extends VrWidgetView {
         private static final String TAG = VrVideoView.class.getSimpleName();
         private static final boolean DEBUG = false;
@@ -148,9 +148,9 @@ tags:
             }
         }
     }
-
+```
 播放调用非常简单，设置好Options后加载视频然后播放就行了，这里播放会在准备好时播放，所以顺序无所谓。
-
+``` java
         public void loadOnLineNormalVrVideo(String path) throws IOException {
             VrVideoView.Options mOptions = new Options();
             mOptions.inputFormat = Options.FORMAT_DEFAULT;
@@ -158,11 +158,11 @@ tags:
             playVideo();
             loadVideo(Uri.parse(path), mOptions);
         }
-
+```
 VrVideoView还是比较简单的，不过要注意一下周期控制，对播放器做对应操作就行了，看官方demo就很清楚，不再细说了。如果只是使用的话看到这里就够了，下面继续分析播放器。
 
 ### 播放器VrVideoPlayerInternal
-
+``` java
     class VrVideoPlayerInternal implements Listener {
         private static final boolean DEBUG = false;
         private static final int MAX_NUM_RENDERERS = 3;
@@ -470,11 +470,12 @@ VrVideoView还是比较简单的，不过要注意一下周期控制，对播放
             return sphericalMetadata;
         }
     }
-    
+```
 看完VrVideoPlayerInternal的代码，都很清晰了，打开播放源，管理纹理和渲染，设入真正的播放器ExoPlayer，回调事件监听方法等。再看一下最重要的渲染器。
 
 ### 渲染器VrVideoRenderer
 
+``` java
     class VrVideoRenderer extends VrWidgetRenderer {
         private static final String TAG = VrVideoRenderer.class.getSimpleName();
         private static final boolean DEBUG = false;
@@ -567,7 +568,7 @@ VrVideoView还是比较简单的，不过要注意一下周期控制，对播放
             }
         }
     }
-    
+```
 VrVideoRenderer继承了VrWidgetRenderer，VrWidgetRenderer继承了Renderer，里面都比较简单就不说了。VR显示的关键部分就是这里了，可惜关键代码写在native层，没法解析了。
 
 ## 总结
