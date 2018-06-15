@@ -1,0 +1,407 @@
+---
+title:      "Android8.0相机源码深入解析(五)"
+description:   "相机流程深入解析:API2打开相机"
+date:       2018-6-13 12:00:00
+author:     "安地"
+tags:
+      - Camera
+      - Android
+---
+
+# 正文
+
+之前四篇介绍了相机流程,但都是基于api1的,在api2下相机整个重写了,虽然还有一部分流程相同,我们从打开相机来分析相机流程
+
+
+## app层
+
+``` Java
+        CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+        try {
+            if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
+                throw new RuntimeException("Time out waiting to lock camera opening.");
+            }
+            manager.openCamera(String.valueOf(mCameraId), mStateCallback, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Interrupted while trying to lock camera opening.", e);
+        }
+```
+先获取相机服务,然后通过CameraManager打开相机,相机api1多了状态回调
+
+## framework层
+
+相机api2framework的java代码在framework/base/code/java/android/hardware/camera2中,api1基本只有Camera.java一个类,新api有好几十个类.
+
+### Camera2模块
+
+CameraManager中openCamera调用openCameraForUid,再调用openCameraDeviceUserAsync,这里是实际实现:
+
+``` Java
+    private CameraDevice openCameraDeviceUserAsync(String cameraId,
+            CameraDevice.StateCallback callback, Handler handler, final int uid)
+            throws CameraAccessException {
+        CameraCharacteristics characteristics = getCameraCharacteristics(cameraId);
+        CameraDevice device = null;
+
+        synchronized (mLock) {
+
+            ICameraDeviceUser cameraUser = null;
+
+            android.hardware.camera2.impl.CameraDeviceImpl deviceImpl =
+                    new android.hardware.camera2.impl.CameraDeviceImpl(
+                        cameraId,
+                        callback,
+                        handler,
+                        characteristics,
+                        mContext.getApplicationInfo().targetSdkVersion);
+
+            ICameraDeviceCallbacks callbacks = deviceImpl.getCallbacks();
+
+            try {
+                if (supportsCamera2ApiLocked(cameraId)) {
+                    // Use cameraservice's cameradeviceclient implementation for HAL3.2+ devices
+                    ICameraService cameraService = CameraManagerGlobal.get().getCameraService();
+                    if (cameraService == null) {
+                        throw new ServiceSpecificException(
+                            ICameraService.ERROR_DISCONNECTED,
+                            "Camera service is currently unavailable");
+                    }
+                    cameraUser = cameraService.connectDevice(callbacks, cameraId,
+                            mContext.getOpPackageName(), uid);
+                } else {
+                    // Use legacy camera implementation for HAL1 devices
+                    int id;
+                    try {
+                        id = Integer.parseInt(cameraId);
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("Expected cameraId to be numeric, but it was: "
+                                + cameraId);
+                    }
+
+                    Log.i(TAG, "Using legacy camera HAL.");
+                    cameraUser = CameraDeviceUserShim.connectBinderShim(callbacks, id);
+                }
+            } catch (ServiceSpecificException e) {
+                if (e.errorCode == ICameraService.ERROR_DEPRECATED_HAL) {
+                    throw new AssertionError("Should've gone down the shim path");
+                } else if (e.errorCode == ICameraService.ERROR_CAMERA_IN_USE ||
+                        e.errorCode == ICameraService.ERROR_MAX_CAMERAS_IN_USE ||
+                        e.errorCode == ICameraService.ERROR_DISABLED ||
+                        e.errorCode == ICameraService.ERROR_DISCONNECTED ||
+                        e.errorCode == ICameraService.ERROR_INVALID_OPERATION) {
+                    // Received one of the known connection errors
+                    // The remote camera device cannot be connected to, so
+                    // set the local camera to the startup error state
+                    deviceImpl.setRemoteFailure(e);
+
+                    if (e.errorCode == ICameraService.ERROR_DISABLED ||
+                            e.errorCode == ICameraService.ERROR_DISCONNECTED ||
+                            e.errorCode == ICameraService.ERROR_CAMERA_IN_USE) {
+                        // Per API docs, these failures call onError and throw
+                        throwAsPublicException(e);
+                    }
+                } else {
+                    // Unexpected failure - rethrow
+                    throwAsPublicException(e);
+                }
+            } catch (RemoteException e) {
+                // Camera service died - act as if it's a CAMERA_DISCONNECTED case
+                ServiceSpecificException sse = new ServiceSpecificException(
+                    ICameraService.ERROR_DISCONNECTED,
+                    "Camera service is currently unavailable");
+                deviceImpl.setRemoteFailure(sse);
+                throwAsPublicException(sse);
+            }
+
+            // TODO: factor out callback to be non-nested, then move setter to constructor
+            // For now, calling setRemoteDevice will fire initial
+            // onOpened/onUnconfigured callbacks.
+            // This function call may post onDisconnected and throw CAMERA_DISCONNECTED if
+            // cameraUser dies during setup.
+            deviceImpl.setRemoteDevice(cameraUser);
+            device = deviceImpl;
+        }
+
+        return device;
+    }
+
+```
+使用CameraManagerGlobal获取到了一个cameraService,cameraService是一个binder代理,通过它调用到服务端的方法,然后connectDeices连接相机设备.
+
+
+### cameraclient
+
+connectDevice方法定义在ICameraService.aidl里:
+
+``` Java
+    ICameraDeviceUser connectDevice(ICameraDeviceCallbacks callbacks,
+            String cameraId,
+            String opPackageName,
+            int clientUid);
+```
+### cameraservice
+
+CameraService.cpp实现了connectDevice方法,这样就调用到了相机服务的方法,
+connectDevice调用connectHelper方法,connectHelper调用了makeClient方法.这些流程在上一篇都有介绍到,这部分api1和api2是一致的.但makeClient在api1和api2返回的client不一样:
+
+``` C
+Status CameraService::makeClient(const sp<CameraService>& cameraService,
+        const sp<IInterface>& cameraCb, const String16& packageName, const String8& cameraId,
+        int facing, int clientPid, uid_t clientUid, int servicePid, bool legacyMode,
+        int halVersion, int deviceVersion, apiLevel effectiveApiLevel,
+        /*out*/sp<BasicClient>* client) {
+
+    if (halVersion < 0 || halVersion == deviceVersion) {
+        // Default path: HAL version is unspecified by caller, create CameraClient
+        // based on device version reported by the HAL.
+        switch(deviceVersion) {
+          case CAMERA_DEVICE_API_VERSION_1_0:
+            if (effectiveApiLevel == API_1) {  // Camera1 API route
+                sp<ICameraClient> tmp = static_cast<ICameraClient*>(cameraCb.get());
+                *client = new CameraClient(cameraService, tmp, packageName, cameraIdToInt(cameraId),
+                        facing, clientPid, clientUid, getpid(), legacyMode);
+            } else { // Camera2 API route
+                ALOGW("Camera using old HAL version: %d", deviceVersion);
+                return STATUS_ERROR_FMT(ERROR_DEPRECATED_HAL,
+                        "Camera device \"%s\" HAL version %d does not support camera2 API",
+                        cameraId.string(), deviceVersion);
+            }
+            break;
+          case CAMERA_DEVICE_API_VERSION_3_0:
+          case CAMERA_DEVICE_API_VERSION_3_1:
+          case CAMERA_DEVICE_API_VERSION_3_2:
+          case CAMERA_DEVICE_API_VERSION_3_3:
+          case CAMERA_DEVICE_API_VERSION_3_4:
+            if (effectiveApiLevel == API_1) { // Camera1 API route
+                sp<ICameraClient> tmp = static_cast<ICameraClient*>(cameraCb.get());
+                *client = new Camera2Client(cameraService, tmp, packageName, cameraIdToInt(cameraId),
+                        facing, clientPid, clientUid, servicePid, legacyMode);
+            } else { // Camera2 API route
+                sp<hardware::camera2::ICameraDeviceCallbacks> tmp =
+                        static_cast<hardware::camera2::ICameraDeviceCallbacks*>(cameraCb.get());
+                *client = new CameraDeviceClient(cameraService, tmp, packageName, cameraId,
+                        facing, clientPid, clientUid, servicePid);
+            }
+            break;
+          default:
+            // Should not be reachable
+            ALOGE("Unknown camera device HAL version: %d", deviceVersion);
+            return STATUS_ERROR_FMT(ERROR_INVALID_OPERATION,
+                    "Camera device \"%s\" has unknown HAL version %d",
+                    cameraId.string(), deviceVersion);
+        }
+    } else {
+        // A particular HAL version is requested by caller. Create CameraClient
+        // based on the requested HAL version.
+        if (deviceVersion > CAMERA_DEVICE_API_VERSION_1_0 &&
+            halVersion == CAMERA_DEVICE_API_VERSION_1_0) {
+            // Only support higher HAL version device opened as HAL1.0 device.
+            sp<ICameraClient> tmp = static_cast<ICameraClient*>(cameraCb.get());
+            *client = new CameraClient(cameraService, tmp, packageName, cameraIdToInt(cameraId),
+                    facing, clientPid, clientUid, servicePid, legacyMode);
+        } else {
+            // Other combinations (e.g. HAL3.x open as HAL2.x) are not supported yet.
+            ALOGE("Invalid camera HAL version %x: HAL %x device can only be"
+                    " opened as HAL %x device", halVersion, deviceVersion,
+                    CAMERA_DEVICE_API_VERSION_1_0);
+            return STATUS_ERROR_FMT(ERROR_ILLEGAL_ARGUMENT,
+                    "Camera device \"%s\" (HAL version %d) cannot be opened as HAL version %d",
+                    cameraId.string(), deviceVersion, halVersion);
+        }
+    }
+    return Status::ok();
+}
+```
+api2下调用的是CameraDeviceClient,继承了Camera2ClientBase:
+
+``` C
+template <typename TClientBase>
+Camera2ClientBase<TClientBase>::Camera2ClientBase(
+        const sp<CameraService>& cameraService,
+        const sp<TCamCallbacks>& remoteCallback,
+        const String16& clientPackageName,
+        const String8& cameraId,
+        int cameraFacing,
+        int clientPid,
+        uid_t clientUid,
+        int servicePid):
+        TClientBase(cameraService, remoteCallback, clientPackageName,
+                cameraId, cameraFacing, clientPid, clientUid, servicePid),
+        mSharedCameraCallbacks(remoteCallback),
+        mDeviceVersion(cameraService->getDeviceVersion(TClientBase::mCameraIdStr)),
+        mDeviceActive(false)
+{
+    ALOGI("Camera %s: Opened. Client: %s (PID %d, UID %d)", cameraId.string(),
+            String8(clientPackageName).string(), clientPid, clientUid);
+
+    mInitialClientPid = clientPid;
+    mDevice = new Camera3Device(cameraId);
+    LOG_ALWAYS_FATAL_IF(mDevice == 0, "Device should never be NULL here.");
+}
+```
+Camera2ClientBase创建了一个Camera3Device,作为hal层代理,调用到hal方法.继续看到Camera2ClientBase的初始化方法:
+
+``` C
+template <typename TClientBase>
+template <typename TProviderPtr>
+status_t Camera2ClientBase<TClientBase>::initializeImpl(TProviderPtr providerPtr) {
+    ATRACE_CALL();
+    ALOGV("%s: Initializing client for camera %s", __FUNCTION__,
+          TClientBase::mCameraIdStr.string());
+    status_t res;
+
+    // Verify ops permissions
+    res = TClientBase::startCameraOps();
+    if (res != OK) {
+        return res;
+    }
+
+    if (mDevice == NULL) {
+        ALOGE("%s: Camera %s: No device connected",
+                __FUNCTION__, TClientBase::mCameraIdStr.string());
+        return NO_INIT;
+    }
+
+    res = mDevice->initialize(providerPtr);
+    if (res != OK) {
+        ALOGE("%s: Camera %s: unable to initialize device: %s (%d)",
+                __FUNCTION__, TClientBase::mCameraIdStr.string(), strerror(-res), res);
+        return res;
+    }
+
+    wp<CameraDeviceBase::NotificationListener> weakThis(this);
+    res = mDevice->setNotifyCallback(weakThis);
+
+    return OK;
+}
+```
+再看Camera3Device的initialize方法:
+``` C
+status_t Camera3Device::initialize(sp<CameraProviderManager> manager) {
+    ATRACE_CALL();
+    Mutex::Autolock il(mInterfaceLock);
+    Mutex::Autolock l(mLock);
+
+    ALOGV("%s: Initializing HIDL device for camera %s", __FUNCTION__, mId.string());
+    if (mStatus != STATUS_UNINITIALIZED) {
+        CLOGE("Already initialized!");
+        return INVALID_OPERATION;
+    }
+    if (manager == nullptr) return INVALID_OPERATION;
+
+    sp<ICameraDeviceSession> session;
+    ATRACE_BEGIN("CameraHal::openSession");
+    status_t res = manager->openSession(mId.string(), this,
+            /*out*/ &session);
+    ATRACE_END();
+    if (res != OK) {
+        SET_ERR_L("Could not open camera session: %s (%d)", strerror(-res), res);
+        return res;
+    }
+
+    res = manager->getCameraCharacteristics(mId.string(), &mDeviceInfo);
+    if (res != OK) {
+        SET_ERR_L("Could not retrive camera characteristics: %s (%d)", strerror(-res), res);
+        session->close();
+        return res;
+    }
+
+    std::shared_ptr<RequestMetadataQueue> queue;
+    auto requestQueueRet = session->getCaptureRequestMetadataQueue(
+        [&queue](const auto& descriptor) {
+            queue = std::make_shared<RequestMetadataQueue>(descriptor);
+            if (!queue->isValid() || queue->availableToWrite() <= 0) {
+                ALOGE("HAL returns empty request metadata fmq, not use it");
+                queue = nullptr;
+                // don't use the queue onwards.
+            }
+        });
+    if (!requestQueueRet.isOk()) {
+        ALOGE("Transaction error when getting request metadata fmq: %s, not use it",
+                requestQueueRet.description().c_str());
+        return DEAD_OBJECT;
+    }
+    auto resultQueueRet = session->getCaptureResultMetadataQueue(
+        [&queue = mResultMetadataQueue](const auto& descriptor) {
+            queue = std::make_unique<ResultMetadataQueue>(descriptor);
+            if (!queue->isValid() ||  queue->availableToWrite() <= 0) {
+                ALOGE("HAL returns empty result metadata fmq, not use it");
+                queue = nullptr;
+                // Don't use the queue onwards.
+            }
+        });
+    if (!resultQueueRet.isOk()) {
+        ALOGE("Transaction error when getting result metadata queue from camera session: %s",
+                resultQueueRet.description().c_str());
+        return DEAD_OBJECT;
+    }
+
+    mInterface = std::make_unique<HalInterface>(session, queue);
+    std::string providerType;
+    mVendorTagId = manager->getProviderTagIdLocked(mId.string());
+
+    return initializeCommonLocked();
+}
+```
+
+这里通过CameraProviderManager的openSession获得一个ICameraDeviceSession,看下openSession方法:
+
+``` C
+status_t CameraProviderManager::openSession(const std::string &id,
+        const sp<hardware::camera::device::V3_2::ICameraDeviceCallback>& callback,
+        /*out*/
+        sp<hardware::camera::device::V3_2::ICameraDeviceSession> *session) {
+
+    std::lock_guard<std::mutex> lock(mInterfaceMutex);
+
+    auto deviceInfo = findDeviceInfoLocked(id,
+            /*minVersion*/ {3,0}, /*maxVersion*/ {4,0});
+    if (deviceInfo == nullptr) return NAME_NOT_FOUND;
+
+    auto *deviceInfo3 = static_cast<ProviderInfo::DeviceInfo3*>(deviceInfo);
+
+    Status status;
+    hardware::Return<void> ret;
+    ret = deviceInfo3->mInterface->open(callback, [&status, &session]
+            (Status s, const sp<device::V3_2::ICameraDeviceSession>& cameraSession) {
+                status = s;
+                if (status == Status::OK) {
+                    *session = cameraSession;
+                }
+            });
+    if (!ret.isOk()) {
+        ALOGE("%s: Transaction error opening a session for camera device %s: %s",
+                __FUNCTION__, id.c_str(), ret.description().c_str());
+        return DEAD_OBJECT;
+    }
+    return mapToStatusT(status);
+}
+```
+
+
+这里是通过一个DeviceInfo获取HardwareInterface,再调用open方法获得一个ICameraDeviceSession,open方法在ICameraDevices.hal中定义,在在hal中实现,session是会话的意思,打开了一个会话,通过这个hidlSession可以直接获得hal的信息.
+
+## hal层
+
+getCaptureResultMetadataQueue定义在ICameraDeviceSession.hal里,实现在CameraDeviceSession.cpp里,看下实现:
+
+``` C
+Return<void> CameraDeviceSession::getCaptureResultMetadataQueue(
+    getCaptureResultMetadataQueue_cb _hidl_cb) {
+    _hidl_cb(*mResultMetadataQueue->getDesc());
+    return Void();
+}
+```
+
+hal层方法,通过mResultMetadataQueue获取到result结果.
+
+## 流程总结
+总结一下api2打开相机整体流程:
+1. app层获得相机服务,通过CameraManager打开相机
+2. CameraManager获取相机服务(CameraService),调用其连接设备方法(connectDevice)
+3. CameraService生成一个Camera2的相机代理(CameraDeviceClient,继承自Camera2ClientBase)
+4. Camera2ClientBase创建一个相机设备(Camera3Device)
+5. Camera3Device初始化时通过CameraProviderManager的open方法获得一个hidl代理会话(ICameraDeviceSession)
+6. 通过ICameraDeviceSession调用到hal层方法获取返回结果(getCaptureResultMetadataQueue)

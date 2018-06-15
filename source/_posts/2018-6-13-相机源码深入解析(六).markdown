@@ -1,0 +1,1907 @@
+---
+title:      "Android8.0相机源码深入解析(六)"
+description:   "相机流程深入解析:高通Camera的HAL"
+date:       2018-6-13 12:00:00
+author:     "安地"
+tags:
+      - Camera
+      - Android
+---
+
+# 正文
+
+之前讲解的几篇相机解析文章虽然都有介绍到hal,但hal层都是点到为止.这一篇来详细讲一下hal的调用流程.基于android8.0的上的高通框架,代码可以在googlesource上下到.
+本篇是基于API1分析.
+
+本篇基于的源码链接:
+
+https://android.googlesource.com/platform/hardware/qcom/camera/+/android-8.1.0_r33
+
+## hal代码结构分析
+
+### 接口部分
+
+hal接口方法定义在hardware/interface/camera里.hal接口以hal为后缀,写法类似java的接口.
+
+ICameraDevice.hal,api1的接口方法,其它还包括ICameraDeviceCallback.hal和ICameraDevicePreviewCallback.hal,包含一些回调.
+ ``` Java
+package android.hardware.camera.device@1.0;
+
+import android.hardware.camera.common@1.0::types;
+import ICameraDeviceCallback;
+import ICameraDevicePreviewCallback;
+
+interface ICameraDevice {
+
+    getResourceCost() generates (Status status, CameraResourceCost resourceCost);
+
+    getCameraInfo() generates (Status status, CameraInfo info);
+
+    setTorchMode(TorchMode mode) generates (Status status);
+
+    dumpState(handle fd) generates (Status status);
+
+    open(ICameraDeviceCallback callback) generates (Status status);
+
+    setPreviewWindow(ICameraDevicePreviewCallback window)
+            generates (Status status);
+
+    enableMsgType(FrameCallbackFlags msgType);
+
+    disableMsgType(FrameCallbackFlags msgType);
+
+    msgTypeEnabled(FrameCallbackFlags msgType) generates (bool enabled);
+
+    startPreview() generates (Status status);
+
+    stopPreview();
+
+    previewEnabled() generates (bool enabled);
+
+    storeMetaDataInBuffers(bool enable) generates (Status status);
+
+    startRecording() generates (Status status);
+
+    stopRecording();
+
+    recordingEnabled() generates (bool enabled);
+
+    releaseRecordingFrame(MemoryId memId, uint32_t bufferIndex);
+
+    releaseRecordingFrameHandle(MemoryId memId, uint32_t bufferIndex, handle frame);
+
+    releaseRecordingFrameHandleBatch(vec<VideoFrameMessage> batch);
+
+    autoFocus() generates (Status status);
+
+    cancelAutoFocus() generates (Status status);
+
+    takePicture() generates (Status status);
+
+    cancelPicture() generates (Status status);
+
+    setParameters(string params) generates (Status status);
+
+    getParameters() generates (string parms);
+
+    sendCommand(CommandType cmd, int32_t arg1, int32_t arg2)
+            generates (Status status);
+
+    close();
+
+};
+```
+
+hardware接口方法写在libhardware/include/hardware/camera.h里,另外还有camera2.h,camera3.h和camera_common.h.
+
+里面定义了一些hal层用到的struct,如camera_device,camera_device_ops_t等.
+
+``` C
+#ifndef ANDROID_INCLUDE_CAMERA_H
+#define ANDROID_INCLUDE_CAMERA_H
+
+#include "camera_common.h"
+
+
+__BEGIN_DECLS
+
+struct camera_memory;
+typedef void (*camera_release_memory)(struct camera_memory *mem);
+
+typedef struct camera_memory {
+    void *data;
+    size_t size;
+    void *handle;
+    camera_release_memory release;
+} camera_memory_t;
+
+typedef camera_memory_t* (*camera_request_memory)(int fd, size_t buf_size, unsigned int num_bufs,
+                                                  void *user);
+
+typedef void (*camera_notify_callback)(int32_t msg_type,
+        int32_t ext1,
+        int32_t ext2,
+        void *user);
+
+typedef void (*camera_data_callback)(int32_t msg_type,
+        const camera_memory_t *data, unsigned int index,
+        camera_frame_metadata_t *metadata, void *user);
+
+typedef void (*camera_data_timestamp_callback)(int64_t timestamp,
+        int32_t msg_type,
+        const camera_memory_t *data, unsigned int index,
+        void *user);
+
+#define HAL_CAMERA_PREVIEW_WINDOW_TAG 0xcafed00d
+
+typedef struct preview_stream_ops {
+    int (*dequeue_buffer)(struct preview_stream_ops* w,
+                          buffer_handle_t** buffer, int *stride);
+    int (*enqueue_buffer)(struct preview_stream_ops* w,
+                buffer_handle_t* buffer);
+    int (*cancel_buffer)(struct preview_stream_ops* w,
+                buffer_handle_t* buffer);
+    int (*set_buffer_count)(struct preview_stream_ops* w, int count);
+    int (*set_buffers_geometry)(struct preview_stream_ops* pw,
+                int w, int h, int format);
+    int (*set_crop)(struct preview_stream_ops *w,
+                int left, int top, int right, int bottom);
+    int (*set_usage)(struct preview_stream_ops* w, int usage);
+    int (*set_swap_interval)(struct preview_stream_ops *w, int interval);
+    int (*get_min_undequeued_buffer_count)(const struct preview_stream_ops *w,
+                int *count);
+    int (*lock_buffer)(struct preview_stream_ops* w,
+                buffer_handle_t* buffer);
+    // Timestamps are measured in nanoseconds, and must be comparable
+    // and monotonically increasing between two frames in the same
+    // preview stream. They do not need to be comparable between
+    // consecutive or parallel preview streams, cameras, or app runs.
+    int (*set_timestamp)(struct preview_stream_ops *w, int64_t timestamp);
+} preview_stream_ops_t;
+
+struct camera_device;
+typedef struct camera_device_ops {
+    ...
+    /**
+     * Start preview mode.
+     */
+    int (*start_preview)(struct camera_device *);
+
+    /**
+     * Stop a previously started preview.
+     */
+    void (*stop_preview)(struct camera_device *);
+
+    /**
+     * Returns true if preview is enabled.
+     */
+    int (*preview_enabled)(struct camera_device *);
+
+    int (*store_meta_data_in_buffers)(struct camera_device *, int enable);
+
+    /**
+     * Start record mode. When a record image is available, a
+     * CAMERA_MSG_VIDEO_FRAME message is sent with the corresponding
+     * frame. Every record frame must be released by a camera HAL client via
+     * releaseRecordingFrame() before the client calls
+     * disableMsgType(CAMERA_MSG_VIDEO_FRAME). After the client calls
+     * disableMsgType(CAMERA_MSG_VIDEO_FRAME), it is the camera HAL's
+     * responsibility to manage the life-cycle of the video recording frames,
+     * and the client must not modify/access any video recording frames.
+     */
+    int (*start_recording)(struct camera_device *);
+
+    /**
+     * Stop a previously started recording.
+     */
+    void (*stop_recording)(struct camera_device *);
+
+    /**
+     * Returns true if recording is enabled.
+     */
+    int (*recording_enabled)(struct camera_device *);
+
+    /**
+     * Release a record frame previously returned by CAMERA_MSG_VIDEO_FRAME.
+     *
+     * It is camera HAL client's responsibility to release video recording
+     * frames sent out by the camera HAL before the camera HAL receives a call
+     * to disableMsgType(CAMERA_MSG_VIDEO_FRAME). After it receives the call to
+     * disableMsgType(CAMERA_MSG_VIDEO_FRAME), it is the camera HAL's
+     * responsibility to manage the life-cycle of the video recording frames.
+     */
+    void (*release_recording_frame)(struct camera_device *,
+                    const void *opaque);
+
+    /**
+     * Start auto focus, the notification callback routine is called with
+     * CAMERA_MSG_FOCUS once when focusing is complete. autoFocus() will be
+     * called again if another auto focus is needed.
+     */
+    int (*auto_focus)(struct camera_device *);
+
+    /**
+     * Cancels auto-focus function. If the auto-focus is still in progress,
+     * this function will cancel it. Whether the auto-focus is in progress or
+     * not, this function will return the focus position to the default.  If
+     * the camera does not support auto-focus, this is a no-op.
+     */
+    int (*cancel_auto_focus)(struct camera_device *);
+
+    /**
+     * Take a picture.
+     */
+    int (*take_picture)(struct camera_device *);
+
+    /**
+     * Cancel a picture that was started with takePicture. Calling this method
+     * when no picture is being taken is a no-op.
+     */
+    int (*cancel_picture)(struct camera_device *);
+
+    /**
+     * Set the camera parameters. This returns BAD_VALUE if any parameter is
+     * invalid or not supported.
+     */
+    int (*set_parameters)(struct camera_device *, const char *parms);
+
+    /** Retrieve the camera parameters.  The buffer returned by the camera HAL
+        must be returned back to it with put_parameters, if put_parameters
+        is not NULL.
+     */
+    char *(*get_parameters)(struct camera_device *);
+
+    /** The camera HAL uses its own memory to pass us the parameters when we
+        call get_parameters.  Use this function to return the memory back to
+        the camera HAL, if put_parameters is not NULL.  If put_parameters
+        is NULL, then you have to use free() to release the memory.
+    */
+    void (*put_parameters)(struct camera_device *, char *);
+
+    ...
+} camera_device_ops_t;
+
+typedef struct camera_device {
+    /**
+     * camera_device.common.version must be in the range
+     * HARDWARE_DEVICE_API_VERSION(0,0)-(1,FF). CAMERA_DEVICE_API_VERSION_1_0 is
+     * recommended.
+     */
+    hw_device_t common;
+    camera_device_ops_t *ops;
+    void *priv;
+} camera_device_t;
+
+```
+### hal代码结构
+
+hal代码在QCamera2下,HAL,HAL3,stack,utils等包.从Android.mk找LOCAL_SRC_FILES,即用到的源码.
+
+``` C
+LOCAL_SRC_FILES := \
+        util/QCameraBufferMaps.cpp \
+        util/QCameraCmdThread.cpp \
+        util/QCameraFlash.cpp \
+        util/QCameraPerf.cpp \
+        util/QCameraQueue.cpp \
+        util/QCameraCommon.cpp \
+        util/QCameraTrace.cpp \
+        util/camscope_packet_type.cpp \
+        QCamera2Hal.cpp \
+        QCamera2Factory.cpp
+ifeq ($(TARGET_SUPPORT_HAL1),false)
+LOCAL_CFLAGS += -DQCAMERA_HAL3_SUPPORT
+else
+LOCAL_CFLAGS += -DQCAMERA_HAL1_SUPPORT
+LOCAL_SRC_FILES += \
+        HAL/QCamera2HWI.cpp \
+        HAL/QCameraMuxer.cpp \
+        HAL/QCameraMem.cpp \
+        HAL/QCameraStateMachine.cpp \
+        HAL/QCameraChannel.cpp \
+        HAL/QCameraStream.cpp \
+        HAL/QCameraPostProc.cpp \
+        HAL/QCamera2HWICallbacks.cpp \
+        HAL/QCameraParameters.cpp \
+        HAL/QCameraParametersIntf.cpp \
+        HAL/QCameraThermalAdapter.cpp \
+        util/QCameraFOVControl.cpp \
+        util/QCameraHALPP.cpp \
+        util/QCameraDualFOVPP.cpp \
+        util/QCameraExtZoomTranslator.cpp
+endif
+```
+
+第一部分是公共的,第二部分是hal1的.
+
+## hal打开设备流程
+
+
+### 模块注册
+先看公共部分的QCamera2Hal.cpp:
+
+``` C
+#include "QCamera2Factory.h"
+#include "HAL3/QCamera3VendorTags.h"
+
+static hw_module_t camera_common = {
+    .tag                    = HARDWARE_MODULE_TAG,
+    .module_api_version     = CAMERA_MODULE_API_VERSION_2_4,
+    .hal_api_version        = HARDWARE_HAL_API_VERSION,
+    .id                     = CAMERA_HARDWARE_MODULE_ID,
+    .name                   = "QCamera Module",
+    .author                 = "Qualcomm Innovation Center Inc",
+    .methods                = &qcamera::QCamera2Factory::mModuleMethods,
+    .dso                    = NULL,
+    .reserved               = {0}
+};
+
+camera_module_t HAL_MODULE_INFO_SYM = {
+    .common                 = camera_common,
+    .get_number_of_cameras  = qcamera::QCamera2Factory::get_number_of_cameras,
+    .get_camera_info        = qcamera::QCamera2Factory::get_camera_info,
+    .set_callbacks          = qcamera::QCamera2Factory::set_callbacks,
+    .get_vendor_tag_ops     = qcamera::QCamera3VendorTags::get_vendor_tag_ops,
+    .open_legacy            = NULL,
+    .set_torch_mode         = qcamera::QCamera2Factory::set_torch_mode,
+    .init                   = NULL,
+    .reserved               = {0}
+};
+```
+这里定义了一个hardware模块模板hw_module_t,有模块名,版本,方法等,每一个hal模块都需要定义一个hw_module_t.
+camera_module_t定义在前面讲的camera_common.h中,包含一些获取相机模块基础信息的方法.
+
+### QCamera2Factory
+
+获取信息的方法都非常简单,可以在QCamera2Factory看到,我们继续探究模块方法mModuleMethods:
+
+``` C
+/*===========================================================================
+ * FUNCTION   : cameraDeviceOpen
+ *
+ * DESCRIPTION: open a camera device with its ID
+ *
+ * PARAMETERS :
+ *   @camera_id : camera ID
+ *   @hw_device : ptr to struct storing camera hardware device info
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int QCamera2Factory::cameraDeviceOpen(int camera_id,
+                    struct hw_device_t **hw_device)
+{
+    int rc = NO_ERROR;
+    if (camera_id < 0 || camera_id >= mNumOfCameras)
+        return -ENODEV;
+
+    if ( NULL == mHalDescriptors ) {
+        LOGE("Hal descriptor table is not initialized!");
+        return NO_INIT;
+    }
+
+    LOGI("Open camera id %d API version %d",
+            camera_id, mHalDescriptors[camera_id].device_version);
+
+    if ( mHalDescriptors[camera_id].device_version == CAMERA_DEVICE_API_VERSION_3_0 ) {
+        CAMSCOPE_INIT(CAMSCOPE_SECTION_HAL);
+        QCamera3HardwareInterface *hw = new QCamera3HardwareInterface(mHalDescriptors[camera_id].cameraId,
+                mCallbacks);
+        if (!hw) {
+            LOGE("Allocation of hardware interface failed");
+            return NO_MEMORY;
+        }
+        rc = hw->openCamera(hw_device);
+        if (rc != 0) {
+            delete hw;
+        }
+    }
+#ifdef QCAMERA_HAL1_SUPPORT
+    else if (mHalDescriptors[camera_id].device_version == CAMERA_DEVICE_API_VERSION_1_0) {
+        QCamera2HardwareInterface *hw = new QCamera2HardwareInterface((uint32_t)camera_id);
+        if (!hw) {
+            LOGE("Allocation of hardware interface failed");
+            return NO_MEMORY;
+        }
+        rc = hw->openCamera(hw_device);
+        if (rc != NO_ERROR) {
+            delete hw;
+        }
+    }
+#endif
+    else {
+        LOGE("Device version for camera id %d invalid %d",
+              camera_id,
+              mHalDescriptors[camera_id].device_version);
+        return BAD_VALUE;
+    }
+
+    return rc;
+}
+
+/*===========================================================================
+ * FUNCTION   : camera_device_open
+ *
+ * DESCRIPTION: static function to open a camera device by its ID
+ *
+ * PARAMETERS :
+ *   @camera_id : camera ID
+ *   @hw_device : ptr to struct storing camera hardware device info
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int QCamera2Factory::camera_device_open(
+    const struct hw_module_t *module, const char *id,
+    struct hw_device_t **hw_device)
+{
+    int rc = NO_ERROR;
+    if (module != &HAL_MODULE_INFO_SYM.common) {
+        LOGE("Invalid module. Trying to open %p, expect %p",
+            module, &HAL_MODULE_INFO_SYM.common);
+        return INVALID_OPERATION;
+    }
+    if (!id) {
+        LOGE("Invalid camera id");
+        return BAD_VALUE;
+    }
+#ifdef QCAMERA_HAL1_SUPPORT
+    if(gQCameraMuxer)
+        rc =  gQCameraMuxer->camera_device_open(module, id, hw_device);
+    else
+#endif
+        rc = gQCamera2Factory->cameraDeviceOpen(atoi(id), hw_device);
+    return rc;
+}
+
+struct hw_module_methods_t QCamera2Factory::mModuleMethods = {
+    .open = QCamera2Factory::camera_device_open,
+};
+```
+模块方法只有一个open方法,然后如果支持是hal1多摄,则走QCameraMuxer,如何是hal3,直接走QCamera3HardwareInterface,否则走QCamera2HardwareInterface.最后都会调用openCamera方法.
+QCameraMuxer用于多个物理相机对应一个逻辑相机,这部分不细看.继续看QCamera2HardwareInterface的openCamera方法.
+QCamera2HardwareInterface定义在QCamera2HWI里,就是一个简写.
+
+### QCamera2HardwareInterface
+
+``` C
+int QCamera2HardwareInterface::openCamera(struct hw_device_t **hw_device)
+{
+    KPI_ATRACE_CAMSCOPE_CALL(CAMSCOPE_HAL1_OPENCAMERA);
+    int rc = NO_ERROR;
+    if (mCameraOpened) {
+        *hw_device = NULL;
+        LOGE("Permission Denied");
+        return PERMISSION_DENIED;
+    }
+    LOGI("[KPI Perf]: E PROFILE_OPEN_CAMERA camera id %d",
+            mCameraId);
+
+    m_perfLockMgr.acquirePerfLock(PERF_LOCK_OPEN_CAMERA);
+
+    rc = openCamera();
+    if (rc == NO_ERROR){
+        *hw_device = &mCameraDevice.common;
+        if (m_thermalAdapter.init(this) != 0) {
+          LOGW("Init thermal adapter failed");
+        }
+    }
+    else
+        *hw_device = NULL;
+
+    LOGI("[KPI Perf]: X PROFILE_OPEN_CAMERA camera id %d, rc: %d",
+            mCameraId, rc);
+
+    return rc;
+}
+```
+
+mCameraDevice是一个camera_device,camera_device的common是一个hw_device,打开相机成功则返回给*hw_device.
+继续看openCamera方法:
+
+``` C
+int QCamera2HardwareInterface::openCamera()
+{
+    int32_t rc = NO_ERROR;
+    char value[PROPERTY_VALUE_MAX];
+
+    if (mCameraHandle) {
+        LOGE("Failure: Camera already opened");
+        return ALREADY_EXISTS;
+    }
+
+    rc = QCameraFlash::getInstance().reserveFlashForCamera(mCameraId);
+    if (rc < 0) {
+        LOGE("Failed to reserve flash for camera id: %d",
+                mCameraId);
+        return UNKNOWN_ERROR;
+    }
+
+    // alloc param buffer
+    DeferWorkArgs args;
+    memset(&args, 0, sizeof(args));
+    mParamAllocJob = queueDeferredWork(CMD_DEF_PARAM_ALLOC, args);
+    if (mParamAllocJob == 0) {
+        LOGE("Failed queueing PARAM_ALLOC job");
+        return -ENOMEM;
+    }
+
+    if (gCamCapability[mCameraId] != NULL) {
+        // allocate metadata buffers
+        DeferWorkArgs args;
+        DeferMetadataAllocArgs metadataAllocArgs;
+
+        memset(&args, 0, sizeof(args));
+        memset(&metadataAllocArgs, 0, sizeof(metadataAllocArgs));
+
+        uint32_t padding =
+                gCamCapability[mCameraId]->padding_info.plane_padding;
+        metadataAllocArgs.size = PAD_TO_SIZE(sizeof(metadata_buffer_t),
+                padding);
+        metadataAllocArgs.bufferCnt = CAMERA_MIN_METADATA_BUFFERS;
+        args.metadataAllocArgs = metadataAllocArgs;
+
+        mMetadataAllocJob = queueDeferredWork(CMD_DEF_METADATA_ALLOC, args);
+        if (mMetadataAllocJob == 0) {
+            LOGE("Failed to allocate metadata buffer");
+            rc = -ENOMEM;
+            goto error_exit1;
+        }
+
+        rc = camera_open((uint8_t)mCameraId, &mCameraHandle);
+        if (rc) {
+            LOGE("camera_open failed. rc = %d, mCameraHandle = %p",
+                     rc, mCameraHandle);
+            goto error_exit2;
+        }
+
+        mCameraHandle->ops->register_event_notify(mCameraHandle->camera_handle,
+                camEvtHandle,
+                (void *) this);
+    } else {
+        LOGH("Capabilities not inited, initializing now.");
+
+        rc = camera_open((uint8_t)mCameraId, &mCameraHandle);
+        if (rc) {
+            LOGE("camera_open failed. rc = %d, mCameraHandle = %p",
+                     rc, mCameraHandle);
+            goto error_exit2;
+        }
+
+        if(NO_ERROR != initCapabilities(mCameraId,mCameraHandle)) {
+            LOGE("initCapabilities failed.");
+            rc = UNKNOWN_ERROR;
+            goto error_exit3;
+        }
+
+        mCameraHandle->ops->register_event_notify(mCameraHandle->camera_handle,
+                camEvtHandle,
+                (void *) this);
+    }
+    mBundledSnapshot = 0;
+    mActiveCameras = MM_CAMERA_TYPE_MAIN;
+    if (isDualCamera()) {
+        mActiveCameras |= MM_CAMERA_TYPE_AUX;
+
+        // Create and initialize FOV-control object
+        m_pFovControl = QCameraFOVControl::create(gCamCapability[mCameraId]->main_cam_cap,
+                gCamCapability[mCameraId]->aux_cam_cap);
+        if (m_pFovControl) {
+            *gCamCapability[mCameraId] = m_pFovControl->consolidateCapabilities(
+                    gCamCapability[mCameraId]->main_cam_cap,
+                    gCamCapability[mCameraId]->aux_cam_cap);
+        } else {
+            LOGE("FOV-control: Failed to create an object");
+            rc = NO_MEMORY;
+            goto error_exit3;
+        }
+    }
+
+    // Init params in the background
+    // 1. It's safe to queue init job, even if alloc job is not yet complete.
+    // It will be queued to the same thread, so the alloc is guaranteed to
+    // finish first.
+    // 2. However, it is not safe to begin param init until after camera is
+    // open. That is why we wait until after camera open completes to schedule
+    // this task.
+    memset(&args, 0, sizeof(args));
+    mParamInitJob = queueDeferredWork(CMD_DEF_PARAM_INIT, args);
+    if (mParamInitJob == 0) {
+        LOGE("Failed queuing PARAM_INIT job");
+        rc = -ENOMEM;
+        goto error_exit3;
+    }
+
+    mCameraOpened = true;
+
+    //Notify display HAL that a camera session is active.
+    //But avoid calling the same during bootup because camera service might open/close
+    //cameras at boot time during its initialization and display service will also internally
+    //wait for camera service to initialize first while calling this display API, resulting in a
+    //deadlock situation. Since boot time camera open/close calls are made only to fetch
+    //capabilities, no need of this display bw optimization.
+    //Use "service.bootanim.exit" property to know boot status.
+    property_get("service.bootanim.exit", value, "0");
+    if (atoi(value) == 1) {
+        pthread_mutex_lock(&gCamLock);
+        if (gNumCameraSessions++ == 0) {
+            setCameraLaunchStatus(true);
+        }
+        pthread_mutex_unlock(&gCamLock);
+    }
+
+    // Setprop to decide the time source (whether boottime or monotonic).
+    // By default, use monotonic time.
+    property_get("persist.camera.time.monotonic", value, "1");
+    mBootToMonoTimestampOffset = 0;
+    if (atoi(value) == 1) {
+        // if monotonic is set, then need to use time in monotonic.
+        // So, Measure the clock offset between BOOTTIME and MONOTONIC
+        // The clock domain source for ISP is BOOTTIME and
+        // for Video/display is MONOTONIC
+        // The below offset is used to convert from clock domain of other subsystem
+        // (video/hardware composer) to that of camera. Assumption is that this
+        // offset won't change during the life cycle of the camera device. In other
+        // words, camera device shouldn't be open during CPU suspend.
+        mBootToMonoTimestampOffset = getBootToMonoTimeOffset();
+    }
+    LOGH("mBootToMonoTimestampOffset = %lld", mBootToMonoTimestampOffset);
+
+    memset(value, 0, sizeof(value));
+    property_get("persist.camera.depth.focus.cb", value, "1");
+    bDepthAFCallbacks = atoi(value);
+
+    memset(value, 0, sizeof(value));
+    property_get("persist.camera.cache.optimize", value, "1");
+    m_bOptimizeCacheOps = atoi(value);
+
+    return NO_ERROR;
+
+error_exit3:
+    if(mJpegClientHandle) {
+        deinitJpegHandle();
+    }
+    mCameraHandle->ops->close_camera(mCameraHandle->camera_handle);
+    mCameraHandle = NULL;
+error_exit2:
+    waitDeferredWork(mMetadataAllocJob);
+error_exit1:
+    waitDeferredWork(mParamAllocJob);
+    return rc;
+
+}
+```
+
+### mm-camera-interface
+
+有一个camera_open方法,实现在QCamera2/stack/mm-camera-interface/src/mm_camera_interface.c里,这里都是一些相机非常底层方法了,一些公共定义的方法,进而调用到驱动层.打出的代码在libmmcamera_interface.so.
+
+找到实现方法:
+
+``` C
+int32_t camera_open(uint8_t camera_idx, mm_camera_vtbl_t **camera_vtbl)
+{
+    int32_t rc = 0;
+    mm_camera_obj_t *cam_obj = NULL;
+    uint32_t cam_idx = camera_idx;
+    uint32_t aux_idx = 0;
+    uint8_t is_multi_camera = 0;
+
+#ifdef QCAMERA_REDEFINE_LOG
+    mm_camera_debug_open();
+#endif
+
+    LOGD("E camera_idx = %d\n", camera_idx);
+    if (is_dual_camera_by_idx(camera_idx)) {
+        is_multi_camera = 1;
+        cam_idx = mm_camera_util_get_handle_by_num(0,
+                g_cam_ctrl.cam_index[camera_idx]);
+        aux_idx = (get_aux_camera_handle(g_cam_ctrl.cam_index[camera_idx])
+                >> MM_CAMERA_HANDLE_SHIFT_MASK);
+        LOGH("Dual Camera: Main ID = %d Aux ID = %d", cam_idx, aux_idx);
+    }
+
+    if (cam_idx >= (uint32_t)g_cam_ctrl.num_cam || cam_idx >=
+        MM_CAMERA_MAX_NUM_SENSORS || aux_idx >= MM_CAMERA_MAX_NUM_SENSORS) {
+        LOGE("Invalid camera_idx (%d)", cam_idx);
+        return -EINVAL;
+    }
+
+    pthread_mutex_lock(&g_intf_lock);
+    /* opened already */
+    if(NULL != g_cam_ctrl.cam_obj[cam_idx] &&
+            g_cam_ctrl.cam_obj[cam_idx]->ref_count != 0) {
+        pthread_mutex_unlock(&g_intf_lock);
+        LOGE("Camera %d is already open", cam_idx);
+        return -EBUSY;
+    }
+
+    cam_obj = (mm_camera_obj_t *)malloc(sizeof(mm_camera_obj_t));
+    if(NULL == cam_obj) {
+        pthread_mutex_unlock(&g_intf_lock);
+        LOGE("no mem");
+        return -EINVAL;
+    }
+
+    /* initialize camera obj */
+    memset(cam_obj, 0, sizeof(mm_camera_obj_t));
+    cam_obj->ctrl_fd = -1;
+    cam_obj->ds_fd = -1;
+    cam_obj->ref_count++;
+    cam_obj->my_num = 0;
+    cam_obj->my_hdl = mm_camera_util_generate_handler(cam_idx);
+    cam_obj->vtbl.camera_handle = cam_obj->my_hdl; /* set handler */
+    cam_obj->vtbl.ops = &mm_camera_ops;
+    pthread_mutex_init(&cam_obj->cam_lock, NULL);
+    pthread_mutex_init(&cam_obj->muxer_lock, NULL);
+    /* unlock global interface lock, if not, in dual camera use case,
+      * current open will block operation of another opened camera obj*/
+    pthread_mutex_lock(&cam_obj->cam_lock);
+    pthread_mutex_unlock(&g_intf_lock);
+
+    rc = mm_camera_open(cam_obj);
+    if (rc != 0) {
+        LOGE("mm_camera_open err = %d", rc);
+        pthread_mutex_destroy(&cam_obj->cam_lock);
+        pthread_mutex_lock(&g_intf_lock);
+        g_cam_ctrl.cam_obj[cam_idx] = NULL;
+        free(cam_obj);
+        cam_obj = NULL;
+        pthread_mutex_unlock(&g_intf_lock);
+        *camera_vtbl = NULL;
+        return rc;
+    }
+
+    if (is_multi_camera) {
+        /*Open Aux camer's*/
+        pthread_mutex_lock(&g_intf_lock);
+        if(NULL != g_cam_ctrl.cam_obj[aux_idx] &&
+                g_cam_ctrl.cam_obj[aux_idx]->ref_count != 0) {
+            pthread_mutex_unlock(&g_intf_lock);
+            LOGE("Camera %d is already open", aux_idx);
+            rc = -EBUSY;
+        } else {
+            pthread_mutex_lock(&cam_obj->muxer_lock);
+            pthread_mutex_unlock(&g_intf_lock);
+            rc = mm_camera_muxer_camera_open(aux_idx, cam_obj);
+        }
+        if (rc != 0) {
+            int32_t temp_rc = 0;
+            LOGE("muxer open err = %d", rc);
+            pthread_mutex_lock(&g_intf_lock);
+            g_cam_ctrl.cam_obj[cam_idx] = NULL;
+            pthread_mutex_lock(&cam_obj->cam_lock);
+            pthread_mutex_unlock(&g_intf_lock);
+            temp_rc = mm_camera_close(cam_obj);
+            pthread_mutex_destroy(&cam_obj->cam_lock);
+            pthread_mutex_destroy(&cam_obj->muxer_lock);
+            free(cam_obj);
+            cam_obj = NULL;
+            *camera_vtbl = NULL;
+            // Propagate the original error to caller
+            return rc;
+        }
+    }
+
+    LOGH("Open succeded: handle = %d", cam_obj->vtbl.camera_handle);
+    g_cam_ctrl.cam_obj[cam_idx] = cam_obj;
+    *camera_vtbl = &cam_obj->vtbl;
+    return 0;
+}
+```
+
+这里出了一些状态值设置,实际调用的是mm_camera_open方法,如果双摄,则是mm_camera_muxer_camera_open方法,在mm_camera.c中找到实现:
+
+``` C
+int32_t mm_camera_open(mm_camera_obj_t *my_obj)
+{
+    char dev_name[MM_CAMERA_DEV_NAME_LEN];
+    int32_t rc = 0;
+    int8_t n_try=MM_CAMERA_DEV_OPEN_TRIES;
+    uint8_t sleep_msec=MM_CAMERA_DEV_OPEN_RETRY_SLEEP;
+    int cam_idx = 0;
+    const char *dev_name_value = NULL;
+    int l_errno = 0;
+
+    LOGD("begin\n");
+
+    if (NULL == my_obj) {
+        goto on_error;
+    }
+
+    dev_name_value = mm_camera_util_get_dev_name_by_num(my_obj->my_num,
+            my_obj->my_hdl);
+    if (NULL == dev_name_value) {
+        goto on_error;
+    }
+    snprintf(dev_name, sizeof(dev_name), "/dev/%s",
+             dev_name_value);
+    sscanf(dev_name, "/dev/video%d", &cam_idx);
+    LOGD("dev name = %s, cam_idx = %d", dev_name, cam_idx);
+
+    do{
+        n_try--;
+        errno = 0;
+        my_obj->ctrl_fd = open(dev_name, O_RDWR | O_NONBLOCK);
+        l_errno = errno;
+        LOGD("ctrl_fd = %d, errno == %d", my_obj->ctrl_fd, l_errno);
+        if((my_obj->ctrl_fd >= 0) || (errno != EIO && errno != ETIMEDOUT) || (n_try <= 0 )) {
+            break;
+        }
+        LOGE("Failed with %s error, retrying after %d milli-seconds",
+              strerror(errno), sleep_msec);
+        usleep(sleep_msec * 1000U);
+    }while (n_try > 0);
+
+    if (my_obj->ctrl_fd < 0) {
+        LOGE("cannot open control fd of '%s' (%s)\n",
+                  dev_name, strerror(l_errno));
+        if (l_errno == EBUSY)
+            rc = -EUSERS;
+        else
+            rc = -1;
+        goto on_error;
+    } else {
+        mm_camera_get_session_id(my_obj, &my_obj->sessionid);
+        LOGH("Camera Opened id = %d sessionid = %d", cam_idx, my_obj->sessionid);
+    }
+
+#ifdef DAEMON_PRESENT
+    /* open domain socket*/
+    n_try = MM_CAMERA_DEV_OPEN_TRIES;
+    do {
+        n_try--;
+        my_obj->ds_fd = mm_camera_socket_create(cam_idx, MM_CAMERA_SOCK_TYPE_UDP);
+        l_errno = errno;
+        LOGD("ds_fd = %d, errno = %d", my_obj->ds_fd, l_errno);
+        if((my_obj->ds_fd >= 0) || (n_try <= 0 )) {
+            LOGD("opened, break out while loop");
+            break;
+        }
+        LOGD("failed with I/O error retrying after %d milli-seconds",
+              sleep_msec);
+        usleep(sleep_msec * 1000U);
+    } while (n_try > 0);
+
+    if (my_obj->ds_fd < 0) {
+        LOGE("cannot open domain socket fd of '%s'(%s)\n",
+                  dev_name, strerror(l_errno));
+        rc = -1;
+        goto on_error;
+    }
+#else /* DAEMON_PRESENT */
+    cam_status_t cam_status;
+    cam_status = mm_camera_module_open_session(my_obj->sessionid,
+            mm_camera_module_event_handler);
+    if (cam_status < 0) {
+        LOGE("Failed to open session");
+        if (cam_status == CAM_STATUS_BUSY) {
+            rc = -EUSERS;
+        } else {
+            rc = -1;
+        }
+        goto on_error;
+    }
+#endif /* DAEMON_PRESENT */
+
+    pthread_mutex_init(&my_obj->msg_lock, NULL);
+    pthread_mutex_init(&my_obj->cb_lock, NULL);
+    pthread_mutex_init(&my_obj->evt_lock, NULL);
+    PTHREAD_COND_INIT(&my_obj->evt_cond);
+
+    LOGD("Launch evt Thread in Cam Open");
+    snprintf(my_obj->evt_thread.threadName, THREAD_NAME_SIZE, "CAM_Dispatch");
+    mm_camera_cmd_thread_launch(&my_obj->evt_thread,
+                                mm_camera_dispatch_app_event,
+                                (void *)my_obj);
+
+    /* launch event poll thread
+     * we will add evt fd into event poll thread upon user first register for evt */
+    LOGD("Launch evt Poll Thread in Cam Open");
+    snprintf(my_obj->evt_poll_thread.threadName, THREAD_NAME_SIZE, "CAM_evntPoll");
+    mm_camera_poll_thread_launch(&my_obj->evt_poll_thread,
+                                 MM_CAMERA_POLL_TYPE_EVT);
+    mm_camera_evt_sub(my_obj, TRUE);
+
+    /* unlock cam_lock, we need release global intf_lock in camera_open(),
+     * in order not block operation of other Camera in dual camera use case.*/
+    pthread_mutex_unlock(&my_obj->cam_lock);
+    LOGD("end (rc = %d)\n", rc);
+    return rc;
+
+on_error:
+
+    if (NULL == dev_name_value) {
+        LOGE("Invalid device name\n");
+        rc = -1;
+    }
+
+    if (NULL == my_obj) {
+        LOGE("Invalid camera object\n");
+        rc = -1;
+    } else {
+        if (my_obj->ctrl_fd >= 0) {
+            close(my_obj->ctrl_fd);
+            my_obj->ctrl_fd = -1;
+        }
+#ifdef DAEMON_PRESENT
+        if (my_obj->ds_fd >= 0) {
+            mm_camera_socket_close(my_obj->ds_fd);
+            my_obj->ds_fd = -1;
+        }
+#endif
+    }
+
+    /* unlock cam_lock, we need release global intf_lock in camera_open(),
+     * in order not block operation of other Camera in dual camera use case.*/
+    pthread_mutex_unlock(&my_obj->cam_lock);
+    return rc;
+}
+```
+
+这里看到一个很特别会尝试多次打开,MM_CAMERA_DEV_OPEN_TRIES值看到定义为20,每次失败都会睡眠一定时间.
+打开驱动设备的方法是open(dev_name, O_RDWR | O_NONBLOCK),这里应该就调用到了驱动层了.剩下的操作看到有打开会话,初始化消息锁等.
+
+回头看QCamera2HardwareInterface,其定义了一个camera_device_ops_t
+
+``` C
+camera_device_ops_t QCamera2HardwareInterface::mCameraOps = {
+    .set_preview_window =        QCamera2HardwareInterface::set_preview_window,
+    .set_callbacks =             QCamera2HardwareInterface::set_CallBacks,
+    .enable_msg_type =           QCamera2HardwareInterface::enable_msg_type,
+    .disable_msg_type =          QCamera2HardwareInterface::disable_msg_type,
+    .msg_type_enabled =          QCamera2HardwareInterface::msg_type_enabled,
+
+    .start_preview =             QCamera2HardwareInterface::start_preview,
+    .stop_preview =              QCamera2HardwareInterface::stop_preview,
+    .preview_enabled =           QCamera2HardwareInterface::preview_enabled,
+    .store_meta_data_in_buffers= QCamera2HardwareInterface::store_meta_data_in_buffers,
+
+    .start_recording =           QCamera2HardwareInterface::start_recording,
+    .stop_recording =            QCamera2HardwareInterface::stop_recording,
+    .recording_enabled =         QCamera2HardwareInterface::recording_enabled,
+    .release_recording_frame =   QCamera2HardwareInterface::release_recording_frame,
+
+    .auto_focus =                QCamera2HardwareInterface::auto_focus,
+    .cancel_auto_focus =         QCamera2HardwareInterface::cancel_auto_focus,
+
+    .take_picture =              QCamera2HardwareInterface::take_picture,
+    .cancel_picture =            QCamera2HardwareInterface::cancel_picture,
+
+    .set_parameters =            QCamera2HardwareInterface::set_parameters,
+    .get_parameters =            QCamera2HardwareInterface::get_parameters,
+    .put_parameters =            QCamera2HardwareInterface::put_parameters,
+    .send_command =              QCamera2HardwareInterface::send_command,
+
+    .release =                   QCamera2HardwareInterface::release,
+    .dump =                      QCamera2HardwareInterface::dump,
+};
+```
+
+初始化时传给了mCameraDevice.ops.
+
+### 流程总结
+
+相机hal注册及打开设备流程:
+
+1. QCamera2Hal注册一个hal模块结构hw_module_t,注册了模块方法QCamera2Factory::mModuleMethods
+2. mModuleMethods的open方法包含camera_device_open方法
+3. camera_device_open方法根据不同情况调用,最终调用QCamera2HardwareInterface的openCamera方法
+4. QCamera2HardwareInterface有一个camera_device_t变量mCameraDevice,内包含注册注册hal方法的camera_device_ops_t和hal设备模板hw_device_t
+5. openCamera方法调用mm_camera_interface的camera_open,再到mm_camera_open
+6. mm_camera_open会尝试多次打开驱动,使用open(dev_name, O_RDWR | O_NONBLOCK)调用到驱动层方法
+
+
+## hal拍照流程
+
+接下来分析下hal层拍照的流程从而梳理下hal层代码.
+
+### 发起请求
+
+发起请求的方法就是上面注册的take_picture方法:
+``` C
+int QCamera2HardwareInterface::take_picture(struct camera_device *device)
+{
+    KPI_ATRACE_CAMSCOPE_CALL(CAMSCOPE_HAL1_TAKE_PICTURE);
+    int ret = NO_ERROR;
+    QCamera2HardwareInterface *hw =
+        reinterpret_cast<QCamera2HardwareInterface *>(device->priv);
+    if (!hw) {
+        LOGE("NULL camera device");
+        return BAD_VALUE;
+    }
+    LOGI("[KPI Perf]: E PROFILE_TAKE_PICTURE camera id %d",
+             hw->getCameraId());
+
+    // Acquire the perf lock for JPEG snapshot only
+    if (hw->mParameters.isJpegPictureFormat()) {
+        hw->m_perfLockMgr.acquirePerfLock(PERF_LOCK_TAKE_SNAPSHOT);
+    }
+
+    qcamera_api_result_t apiResult;
+
+   /** Added support for Retro-active Frames:
+     *  takePicture() is called before preparing Snapshot to indicate the
+     *  mm-camera-channel to pick up legacy frames even
+     *  before LED estimation is triggered.
+     */
+
+    LOGH("isLiveSnap %d, isZSL %d, isHDR %d longshot = %d",
+           hw->isLiveSnapshot(), hw->isZSLMode(), hw->isHDRMode(),
+           hw->isLongshotEnabled());
+
+    // Check for Retro-active Frames
+    if ((hw->mParameters.getNumOfRetroSnapshots() > 0) &&
+        !hw->isLiveSnapshot() && hw->isZSLMode() &&
+        !hw->isHDRMode() && !hw->isLongshotEnabled()) {
+        // Set Retro Picture Mode
+        hw->setRetroPicture(1);
+        hw->m_bLedAfAecLock = 0;
+        LOGL("Retro Enabled");
+
+        // Give HWI control to call pre_take_picture in single camera mode.
+        // In dual-cam mode, this control belongs to muxer.
+        if (hw->getRelatedCamSyncInfo()->sync_control != CAM_SYNC_RELATED_SENSORS_ON) {
+            ret = pre_take_picture(device);
+            if (ret != NO_ERROR) {
+                LOGE("pre_take_picture failed with ret = %d",ret);
+                return ret;
+            }
+        }
+
+        /* Call take Picture for total number of snapshots required.
+             This includes the number of retro frames and normal frames */
+        hw->lockAPI();
+        ret = hw->processAPI(QCAMERA_SM_EVT_TAKE_PICTURE, NULL);
+        if (ret == NO_ERROR) {
+          // Wait for retro frames, before calling prepare snapshot
+          LOGD("Wait for Retro frames to be done");
+          hw->waitAPIResult(QCAMERA_SM_EVT_TAKE_PICTURE, &apiResult);
+            ret = apiResult.status;
+        }
+        /* Unlock API since it is acquired in prepare snapshot seperately */
+        hw->unlockAPI();
+
+        /* Prepare snapshot in case LED needs to be flashed */
+        LOGD("Start Prepare Snapshot");
+        ret = hw->prepare_snapshot(device);
+    }
+    else {
+        hw->setRetroPicture(0);
+        // Check if prepare snapshot is done
+        if (!hw->mPrepSnapRun) {
+            // Ignore the status from prepare_snapshot
+            hw->prepare_snapshot(device);
+        }
+
+        // Give HWI control to call pre_take_picture in single camera mode.
+        // In dual-cam mode, this control belongs to muxer.
+        if (hw->getRelatedCamSyncInfo()->sync_control != CAM_SYNC_RELATED_SENSORS_ON) {
+            ret = pre_take_picture(device);
+            if (ret != NO_ERROR) {
+                LOGE("pre_take_picture failed with ret = %d",ret);
+                return ret;
+            }
+        }
+
+        // Regardless what the result value for prepare_snapshot,
+        // go ahead with capture anyway. Just like the way autofocus
+        // is handled in capture case
+        /* capture */
+        LOGL("Capturing normal frames");
+        hw->lockAPI();
+        ret = hw->processAPI(QCAMERA_SM_EVT_TAKE_PICTURE, NULL);
+        if (ret == NO_ERROR) {
+          hw->waitAPIResult(QCAMERA_SM_EVT_TAKE_PICTURE, &apiResult);
+            ret = apiResult.status;
+        }
+        hw->unlockAPI();
+        if (!hw->isLongshotEnabled()){
+            // For longshot mode, we prepare snapshot only once
+            hw->mPrepSnapRun = false;
+         }
+    }
+    LOGI("[KPI Perf]: X ret = %d", ret);
+    return ret;
+}
+```
+调用processAPI传递消息,如果没有错误,则使用waitAPIResult等待结果:
+``` C
+int QCamera2HardwareInterface::processAPI(qcamera_sm_evt_enum_t api, void *api_payload)
+{
+    int ret = DEAD_OBJECT;
+
+    if (m_smThreadActive) {
+        ret = m_stateMachine.procAPI(api, api_payload);
+    }
+
+    return ret;
+}
+```
+
+这里又调用到相机状态机:
+``` C
+/*===========================================================================
+ * FUNCTION   : procEvt
+ *
+ * DESCRIPTION: process incoming envent from mm-camera-interface and
+ *              mm-jpeg-interface.
+ *
+ * PARAMETERS :
+ *   @evt          : event to be processed
+ *   @evt_payload  : event payload. Can be NULL if not needed.
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t QCameraStateMachine::procAPI(qcamera_sm_evt_enum_t evt,
+                                     void *api_payload)
+{
+    qcamera_sm_cmd_t *node =
+        (qcamera_sm_cmd_t *)malloc(sizeof(qcamera_sm_cmd_t));
+    if (NULL == node) {
+        LOGE("No memory for qcamera_sm_cmd_t");
+        return NO_MEMORY;
+    }
+
+    memset(node, 0, sizeof(qcamera_sm_cmd_t));
+    node->cmd = QCAMERA_SM_CMD_TYPE_API;
+    node->evt = evt;
+    node->evt_payload = api_payload;
+    if (api_queue.enqueue((void *)node)) {
+        cam_sem_post(&cmd_sem);
+        return NO_ERROR;
+    } else {
+        LOGE("API enqueue failed API = %d", evt);
+        free(node);
+        return UNKNOWN_ERROR;
+    }
+}
+```
+注释说明这里是处理mm-camera-interface和mm-jpeg-interface的消息.
+这里在列队里添加一个消息,然后信号量同步.cam_sem_post方法在cam_semaphore.h中,不深入看了.
+继续看QCameraQueue::enqueue方法:
+``` C
+bool QCameraQueue::enqueue(void *data)
+{
+    bool rc;
+    camera_q_node *node =
+        (camera_q_node *)malloc(sizeof(camera_q_node));
+    if (NULL == node) {
+        LOGE("No memory for camera_q_node");
+        return false;
+    }
+
+    memset(node, 0, sizeof(camera_q_node));
+    node->data = data;
+
+    pthread_mutex_lock(&m_lock);
+    if (m_active) {
+        cam_list_add_tail_node(&node->list, &m_head.list);
+        m_size++;
+        rc = true;
+    } else {
+        free(node);
+        rc = false;
+    }
+    pthread_mutex_unlock(&m_lock);
+    return rc;
+}
+```
+在队尾添加了一个节点,cam_list_add_tail_node也是在stack/common中的方法.
+
+
+### 状态机处理
+消息进队后还是得找到处理消息的方法,回到QCameraStateMachine,其有一个周期性方法smEvtProcRoutine,初始化时起了一个线程循环调用.
+
+``` C
+/*===========================================================================
+ * FUNCTION   : smEvtProcRoutine
+ *
+ * DESCRIPTION: Statemachine process thread routine to handle events
+ *              in different state.
+ *
+ * PARAMETERS :
+ *   @data    : ptr to QCameraStateMachine object
+ *
+ * RETURN     : none
+ *==========================================================================*/
+void *QCameraStateMachine::smEvtProcRoutine(void *data)
+{
+    int running = 1, ret;
+    QCameraStateMachine *pme = (QCameraStateMachine *)data;
+
+    LOGH("E");
+    do {
+        do {
+            ret = cam_sem_wait(&pme->cmd_sem);
+            if (ret != 0 && errno != EINVAL) {
+                LOGE("cam_sem_wait error (%s)",
+                            strerror(errno));
+                return NULL;
+            }
+        } while (ret != 0);
+
+        // we got notified about new cmd avail in cmd queue
+        // first check API cmd queue
+        qcamera_sm_cmd_t *node = (qcamera_sm_cmd_t *)pme->api_queue.dequeue();
+        if (node == NULL) {
+            // no API cmd, then check evt cmd queue
+            node = (qcamera_sm_cmd_t *)pme->evt_queue.dequeue();
+        }
+        if (node != NULL) {
+            switch (node->cmd) {
+            case QCAMERA_SM_CMD_TYPE_API:
+                pme->stateMachine(node->evt, node->evt_payload);
+                // API is in a way sync call, so evt_payload is managed by HWI
+                // no need to free payload for API
+                break;
+            case QCAMERA_SM_CMD_TYPE_EVT:
+                pme->stateMachine(node->evt, node->evt_payload);
+
+                // EVT is async call, so payload need to be free after use
+                free(node->evt_payload);
+                node->evt_payload = NULL;
+                break;
+            case QCAMERA_SM_CMD_TYPE_EXIT:
+                running = 0;
+                break;
+            default:
+                break;
+            }
+            free(node);
+            node = NULL;
+        }
+    } while (running);
+    LOGH("X");
+    return NULL;
+}
+/*===========================================================================
+ * FUNCTION   : QCameraStateMachine
+ *
+ * DESCRIPTION: constructor of QCameraStateMachine. Will start process thread
+ *
+ * PARAMETERS :
+ *   @ctrl    : ptr to HWI object
+ *
+ * RETURN     : none
+ *==========================================================================*/
+QCameraStateMachine::QCameraStateMachine(QCamera2HardwareInterface *ctrl) :
+    api_queue(),
+    evt_queue()
+{
+    m_parent = ctrl;
+    m_state = QCAMERA_SM_STATE_PREVIEW_STOPPED;
+    cmd_pid = 0;
+    cam_sem_init(&cmd_sem, 0);
+    xunh(&cmd_pid,
+                   NULL,
+                   smEvtProcRoutine,
+                   this);
+    pthread_setname_np(cmd_pid, "CAM_stMachine");
+    m_bDelayPreviewMsgs = false;
+    m_DelayedMsgs = 0;
+    m_RestoreZSL = TRUE;
+    m_bPreviewCallbackNeeded = TRUE;
+}
+```
+
+smEvtProcRoutine就是通过信号量判断是否有消息等待,然后通过api_queue.dequeue()就是QCameraQueue的出队方法获取命令.
+然后通过stateMachine(node->evt, node->evt_payload)方法处理,QCAMERA_SM_CMD_TYPE_API不需要清空消息
+
+``` C
+int32_t QCameraStateMachine::stateMachine(qcamera_sm_evt_enum_t evt, void *payload)
+{
+    int32_t rc = NO_ERROR;
+    LOGL("m_state %d, event (%d)", m_state, evt);
+    switch (m_state) {
+    case QCAMERA_SM_STATE_PREVIEW_STOPPED:
+        rc = procEvtPreviewStoppedState(evt, payload);
+        break;
+    case QCAMERA_SM_STATE_PREVIEW_READY:
+        rc = procEvtPreviewReadyState(evt, payload);
+        break;
+    case QCAMERA_SM_STATE_PREVIEWING:
+        rc = procEvtPreviewingState(evt, payload);
+        break;
+    case QCAMERA_SM_STATE_PREPARE_SNAPSHOT:
+        rc = procEvtPrepareSnapshotState(evt, payload);
+        break;
+    case QCAMERA_SM_STATE_PIC_TAKING:
+        rc = procEvtPicTakingState(evt, payload);
+        break;
+    case QCAMERA_SM_STATE_RECORDING:
+        rc = procEvtRecordingState(evt, payload);
+        break;
+    case QCAMERA_SM_STATE_VIDEO_PIC_TAKING:
+        rc = procEvtVideoPicTakingState(evt, payload);
+        break;
+    case QCAMERA_SM_STATE_PREVIEW_PIC_TAKING:
+        rc = procEvtPreviewPicTakingState(evt, payload);
+        break;
+    default:
+        break;
+    }
+
+    return rc;
+}
+```
+假设当前是preview状态,看procEvtPreviewingState代码:
+``` C
+int32_t QCameraStateMachine::procEvtPreviewingState(qcamera_sm_evt_enum_t evt,
+                                                    void *payload)
+{
+    int32_t rc = NO_ERROR;
+    qcamera_api_result_t result;
+    memset(&result, 0, sizeof(qcamera_api_result_t));
+
+    LOGL("event (%d)", evt);
+    switch (evt) {
+    ...
+    case QCAMERA_SM_EVT_TAKE_PICTURE:
+       {
+           LOGL("QCAMERA_SM_EVT_TAKE_PICTURE ");
+           if ( m_parent->mParameters.getRecordingHintValue() == true) {
+                m_parent->stopPreview();
+                m_parent->mParameters.updateRecordingHintValue(FALSE);
+                // start preview again
+                rc = m_parent->preparePreview();
+                if (rc == NO_ERROR) {
+                    rc = m_parent->startPreview();
+                    if (rc != NO_ERROR) {
+                        m_parent->unpreparePreview();
+                    }
+                }
+           }
+           if (m_parent->isZSLMode() || m_parent->isLongshotEnabled()) {
+               bool restartPreview = m_parent->isPreviewRestartEnabled();
+               if ((restartPreview) && (m_parent->mParameters.getManualCaptureMode()
+                       >= CAM_MANUAL_CAPTURE_TYPE_3)) {
+                   /* stop preview and disable ZSL now */
+                   m_parent->stopPreview();
+                   m_parent->mParameters.updateZSLModeValue(FALSE);
+                   m_RestoreZSL = TRUE;
+                   m_bDelayPreviewMsgs = true;
+                   m_state = QCAMERA_SM_STATE_PIC_TAKING;
+               } else {
+                   m_state = QCAMERA_SM_STATE_PREVIEW_PIC_TAKING;
+                   m_bDelayPreviewMsgs = true;
+               }
+
+               rc = m_parent->takePicture();
+               if (rc != NO_ERROR) {
+                   // move state to previewing state
+                   m_parent->unconfigureAdvancedCapture();
+                   m_state = QCAMERA_SM_STATE_PREVIEWING;
+               }
+               if (!(m_parent->isRetroPicture()) || (rc != NO_ERROR)) {
+                   LOGD("signal API result, m_state = %d",
+                          m_state);
+                   result.status = rc;
+                   result.request_api = evt;
+                   result.result_type = QCAMERA_API_RESULT_TYPE_DEF;
+                   m_parent->signalAPIResult(&result);
+               }
+           } else {
+               m_state = QCAMERA_SM_STATE_PIC_TAKING;
+               rc = m_parent->takePicture();
+               if (rc != NO_ERROR) {
+                   int32_t temp_rc = NO_ERROR;
+                   // move state to preview stopped state
+                   m_parent->unconfigureAdvancedCapture();
+                   m_parent->stopPreview();
+                   // start preview again
+                   temp_rc = m_parent->preparePreview();
+                   if (temp_rc == NO_ERROR) {
+                       temp_rc = m_parent->startPreview();
+                       if (temp_rc != NO_ERROR) {
+                           m_parent->unpreparePreview();
+                           m_state = QCAMERA_SM_STATE_PREVIEW_STOPPED;
+                       } else {
+                           m_state = QCAMERA_SM_STATE_PREVIEWING;
+                       }
+                   } else {
+                       m_state = QCAMERA_SM_STATE_PREVIEW_STOPPED;
+                   }
+               }
+               result.status = rc;
+               result.request_api = evt;
+               result.result_type = QCAMERA_API_RESULT_TYPE_DEF;
+               m_parent->signalAPIResult(&result);
+           }
+        }
+        break;
+    ...
+    default:
+        LOGW("Cannot handle evt(%d) in state(%d)", evt, m_state);
+        break;
+    }
+
+    return rc;
+}
+```
+把状态置为QCAMERA_SM_STATE_PIC_TAKING,调用QCamera2HardwareInterface的takePicture,如果返回没有错误,则重新startPreview.
+最后用signalAPIResult回调状态结果.
+
+### 拍照实现
+
+takePicture方法:
+
+``` C
+int QCamera2HardwareInterface::takePicture()
+{
+    int rc = NO_ERROR;
+
+    // Get total number for snapshots (retro + regular)
+    uint8_t numSnapshots = mParameters.getNumOfSnapshots();
+    // Get number of retro-active snapshots
+    uint8_t numRetroSnapshots = mParameters.getNumOfRetroSnapshots();
+    LOGH("E");
+
+    //Set rotation value from user settings as Jpeg rotation
+    //to configure back-end modules.
+    mParameters.setJpegRotation(mParameters.getRotation());
+
+    // Check if retro-active snapshots are not enabled
+    if (!isRetroPicture() || !mParameters.isZSLMode()) {
+      numRetroSnapshots = 0;
+      LOGH("Reset retro snaphot count to zero");
+    }
+
+    //Do special configure for advanced capture modes.
+    rc = configureAdvancedCapture();
+    if (rc != NO_ERROR) {
+        LOGE("Unsupported capture call");
+        return rc;
+    }
+
+    if (mAdvancedCaptureConfigured) {
+        numSnapshots = mParameters.getBurstCountForAdvancedCapture();
+    }
+
+    if (mActiveCameras == MM_CAMERA_DUAL_CAM && mBundledSnapshot) {
+        char prop[PROPERTY_VALUE_MAX];
+        memset(prop, 0, sizeof(prop));
+        property_get("persist.camera.dualfov.jpegnum", prop, "1");
+        int dualfov_snap_num = atoi(prop);
+
+        memset(prop, 0, sizeof(prop));
+        property_get("persist.camera.halpp", prop, "0");
+        int halpp_enabled = atoi(prop);
+        if(halpp_enabled == 0) {
+            dualfov_snap_num = MM_CAMERA_MAX_CAM_CNT;
+        }
+
+        dualfov_snap_num = (dualfov_snap_num == 0) ? 1 : dualfov_snap_num;
+        LOGD("dualfov_snap_num:%d", dualfov_snap_num);
+        numSnapshots /= dualfov_snap_num;
+    }
+
+    LOGI("snap count = %d zsl = %d advanced = %d, active camera:%d",
+            numSnapshots, mParameters.isZSLMode(), mAdvancedCaptureConfigured, mActiveCameras);
+
+    if (mParameters.isZSLMode()) {
+        QCameraChannel *pChannel = m_channels[QCAMERA_CH_TYPE_ZSL];
+        QCameraPicChannel *pPicChannel = (QCameraPicChannel *)pChannel;
+        if (NULL != pPicChannel) {
+
+            if (mParameters.getofflineRAW()) {
+                startRAWChannel(pPicChannel);
+                pPicChannel = (QCameraPicChannel *)m_channels[QCAMERA_CH_TYPE_RAW];
+                if (pPicChannel == NULL) {
+                    LOGE("RAW Channel is NULL in Manual capture mode");
+                    stopRAWChannel();
+                    return UNKNOWN_ERROR;
+                }
+            }
+
+            rc = configureOnlineRotation(*pPicChannel);
+            if (rc != NO_ERROR) {
+                LOGE("online rotation failed");
+                return rc;
+            }
+
+            // start postprocessor
+            DeferWorkArgs args;
+            memset(&args, 0, sizeof(DeferWorkArgs));
+
+            args.pprocArgs = pPicChannel;
+
+            // No need to wait for mInitPProcJob here, because it was
+            // queued in startPreview, and will definitely be processed before
+            // mReprocJob can begin.
+            mReprocJob = queueDeferredWork(CMD_DEF_PPROC_START,
+                    args);
+            if (mReprocJob == 0) {
+                LOGE("Failure: Unable to start pproc");
+                return -ENOMEM;
+            }
+
+            // Check if all preview buffers are mapped before creating
+            // a jpeg session as preview stream buffers are queried during the same
+            uint8_t numStreams = pChannel->getNumOfStreams();
+            QCameraStream *pStream = NULL;
+            QCameraStream *pPreviewStream = NULL;
+            for (uint8_t i = 0 ; i < numStreams ; i++ ) {
+                pStream = pChannel->getStreamByIndex(i);
+                if (!pStream)
+                    continue;
+                if (CAM_STREAM_TYPE_PREVIEW == pStream->getMyType()) {
+                    pPreviewStream = pStream;
+                    break;
+                }
+            }
+            if (pPreviewStream != NULL) {
+                Mutex::Autolock l(mMapLock);
+                QCameraMemory *pMemory = pStream->getStreamBufs();
+                if (!pMemory) {
+                    LOGE("Error!! pMemory is NULL");
+                    return -ENOMEM;
+                }
+
+                uint8_t waitCnt = 2;
+                while (!pMemory->checkIfAllBuffersMapped() && (waitCnt > 0)) {
+                    LOGL(" Waiting for preview buffers to be mapped");
+                    mMapCond.waitRelative(
+                            mMapLock, CAMERA_DEFERRED_MAP_BUF_TIMEOUT);
+                    LOGL("Wait completed!!");
+                    waitCnt--;
+                }
+                // If all buffers are not mapped after retries, assert
+                assert(pMemory->checkIfAllBuffersMapped());
+            } else {
+                assert(pPreviewStream);
+            }
+
+            // Create JPEG session
+            mJpegJob = queueDeferredWork(CMD_DEF_CREATE_JPEG_SESSION,
+                    args);
+            if (mJpegJob == 0) {
+                LOGE("Failed to queue CREATE_JPEG_SESSION");
+                if (NO_ERROR != waitDeferredWork(mReprocJob)) {
+                        LOGE("Reprocess Deferred work was failed");
+                }
+                m_postprocessor.stop();
+                return -ENOMEM;
+            }
+
+            if (mAdvancedCaptureConfigured) {
+                rc = startAdvancedCapture(pPicChannel);
+                if (rc != NO_ERROR) {
+                    LOGE("cannot start zsl advanced capture");
+                    return rc;
+                }
+            }
+            if (mLongshotEnabled && mPrepSnapRun) {
+                mCameraHandle->ops->start_zsl_snapshot(
+                        mCameraHandle->camera_handle,
+                        pPicChannel->getMyHandle());
+            }
+            // If frame sync is ON and it is a SECONDARY camera,
+            // we do not need to send the take picture command to interface
+            // It will be handled along with PRIMARY camera takePicture request
+            mm_camera_req_buf_t buf;
+            memset(&buf, 0x0, sizeof(buf));
+            if ((!mParameters.isAdvCamFeaturesEnabled() &&
+                    !mFlashNeeded &&
+                    !isLongshotEnabled() &&
+                    isFrameSyncEnabled()) &&
+                    (getRelatedCamSyncInfo()->sync_control ==
+                    CAM_SYNC_RELATED_SENSORS_ON)) {
+                if (getRelatedCamSyncInfo()->mode == CAM_MODE_PRIMARY) {
+                    buf.type = MM_CAMERA_REQ_FRAME_SYNC_BUF;
+                    buf.num_buf_requested = numSnapshots;
+                    rc = pPicChannel->takePicture(&buf);
+                    if (rc != NO_ERROR) {
+                        LOGE("FS_DBG cannot take ZSL picture, stop pproc");
+                        if (NO_ERROR != waitDeferredWork(mReprocJob)) {
+                            LOGE("Reprocess Deferred work failed");
+                            return UNKNOWN_ERROR;
+                        }
+                        if (NO_ERROR != waitDeferredWork(mJpegJob)) {
+                            LOGE("Jpeg Deferred work failed");
+                            return UNKNOWN_ERROR;
+                        }
+                        m_postprocessor.stop();
+                        return rc;
+                    }
+                    LOGI("PRIMARY camera: send frame sync takePicture!!");
+                }
+            } else {
+                buf.type = MM_CAMERA_REQ_SUPER_BUF;
+                buf.num_buf_requested = numSnapshots;
+                buf.num_retro_buf_requested = numRetroSnapshots;
+                rc = pPicChannel->takePicture(&buf);
+                if (rc != NO_ERROR) {
+                    LOGE("cannot take ZSL picture, stop pproc");
+                        if (NO_ERROR != waitDeferredWork(mReprocJob)) {
+                            LOGE("Reprocess Deferred work failed");
+                            return UNKNOWN_ERROR;
+                        }
+                        if (NO_ERROR != waitDeferredWork(mJpegJob)) {
+                            LOGE("Jpeg Deferred work failed");
+                            return UNKNOWN_ERROR;
+                        }
+                    m_postprocessor.stop();
+                    return rc;
+                }
+            }
+        } else {
+            LOGE("ZSL channel is NULL");
+            return UNKNOWN_ERROR;
+        }
+    } else {
+
+        // start snapshot
+        if (mParameters.isJpegPictureFormat() ||
+                mParameters.isNV16PictureFormat() ||
+                mParameters.isNV21PictureFormat()) {
+
+            //STOP Preview for Non ZSL use case
+            stopPreview();
+
+            //Config CAPTURE channels
+            rc = declareSnapshotStreams();
+            if (NO_ERROR != rc) {
+                return rc;
+            }
+
+            rc = addCaptureChannel();
+            if ((rc == NO_ERROR) &&
+                    (NULL != m_channels[QCAMERA_CH_TYPE_CAPTURE])) {
+
+                if (!mParameters.getofflineRAW()) {
+                    rc = configureOnlineRotation(
+                        *m_channels[QCAMERA_CH_TYPE_CAPTURE]);
+                    if (rc != NO_ERROR) {
+                        LOGE("online rotation failed");
+                        delChannel(QCAMERA_CH_TYPE_CAPTURE);
+                        return rc;
+                    }
+                }
+
+                DeferWorkArgs args;
+                memset(&args, 0, sizeof(DeferWorkArgs));
+
+                args.pprocArgs = m_channels[QCAMERA_CH_TYPE_CAPTURE];
+
+                // No need to wait for mInitPProcJob here, because it was
+                // queued in startPreview, and will definitely be processed before
+                // mReprocJob can begin.
+                mReprocJob = queueDeferredWork(CMD_DEF_PPROC_START,
+                        args);
+                if (mReprocJob == 0) {
+                    LOGE("Failure: Unable to start pproc");
+                    return -ENOMEM;
+                }
+
+                // Create JPEG session
+                mJpegJob = queueDeferredWork(CMD_DEF_CREATE_JPEG_SESSION,
+                        args);
+                if (mJpegJob == 0) {
+                    LOGE("Failed to queue CREATE_JPEG_SESSION");
+                    if (NO_ERROR != waitDeferredWork(mReprocJob)) {
+                        LOGE("Reprocess Deferred work was failed");
+                    }
+                    m_postprocessor.stop();
+                    return -ENOMEM;
+                }
+
+                // start catpure channel
+                rc =  m_channels[QCAMERA_CH_TYPE_CAPTURE]->start();
+                if (rc != NO_ERROR) {
+                    LOGE("cannot start capture channel");
+                    if (NO_ERROR != waitDeferredWork(mReprocJob)) {
+                        LOGE("Reprocess Deferred work failed");
+                        return UNKNOWN_ERROR;
+                    }
+                    if (NO_ERROR != waitDeferredWork(mJpegJob)) {
+                        LOGE("Jpeg Deferred work failed");
+                        return UNKNOWN_ERROR;
+                    }
+                    delChannel(QCAMERA_CH_TYPE_CAPTURE);
+                    return rc;
+                }
+
+                QCameraPicChannel *pCapChannel =
+                    (QCameraPicChannel *)m_channels[QCAMERA_CH_TYPE_CAPTURE];
+                if (NULL != pCapChannel) {
+                    if (mParameters.isUbiFocusEnabled() ||
+                            mParameters.isUbiRefocus() ||
+                            mParameters.isChromaFlashEnabled()) {
+                        rc = startAdvancedCapture(pCapChannel);
+                        if (rc != NO_ERROR) {
+                            LOGE("cannot start advanced capture");
+                            return rc;
+                        }
+                    }
+                }
+                if ( mLongshotEnabled ) {
+                    rc = longShot();
+                    if (NO_ERROR != rc) {
+                        if (NO_ERROR != waitDeferredWork(mReprocJob)) {
+                            LOGE("Reprocess Deferred work failed");
+                            return UNKNOWN_ERROR;
+                        }
+                        if (NO_ERROR != waitDeferredWork(mJpegJob)) {
+                            LOGE("Jpeg Deferred work failed");
+                            return UNKNOWN_ERROR;
+                        }
+                        delChannel(QCAMERA_CH_TYPE_CAPTURE);
+                        return rc;
+                    }
+                }
+            } else {
+                LOGE("cannot add capture channel");
+                delChannel(QCAMERA_CH_TYPE_CAPTURE);
+                return rc;
+            }
+        } else {
+            // Stop Preview before taking NZSL snapshot
+            stopPreview();
+
+            rc = mParameters.updateRAW(gCamCapability[mCameraId]->raw_dim[0]);
+            if (NO_ERROR != rc) {
+                LOGE("Raw dimension update failed %d", rc);
+                return rc;
+            }
+
+            rc = declareSnapshotStreams();
+            if (NO_ERROR != rc) {
+                LOGE("RAW stream info configuration failed %d", rc);
+                return rc;
+            }
+
+            rc = addChannel(QCAMERA_CH_TYPE_RAW);
+            if (rc == NO_ERROR) {
+                // start postprocessor
+                if (NO_ERROR != waitDeferredWork(mInitPProcJob)) {
+                    LOGE("Reprocess Deferred work failed");
+                    return UNKNOWN_ERROR;
+                }
+
+                rc = m_postprocessor.start(m_channels[QCAMERA_CH_TYPE_RAW]);
+                if (rc != NO_ERROR) {
+                    LOGE("cannot start postprocessor");
+                    delChannel(QCAMERA_CH_TYPE_RAW);
+                    return rc;
+                }
+
+                rc = startChannel(QCAMERA_CH_TYPE_RAW);
+                if (rc != NO_ERROR) {
+                    LOGE("cannot start raw channel");
+                    m_postprocessor.stop();
+                    delChannel(QCAMERA_CH_TYPE_RAW);
+                    return rc;
+                }
+            } else {
+                LOGE("cannot add raw channel");
+                return rc;
+            }
+        }
+    }
+
+    //When take picture, stop sending preview callbacks to APP
+    m_stateMachine.setPreviewCallbackNeeded(false);
+    LOGI("X rc = %d", rc);
+    return rc;
+}
+```
+
+创建了一个QCameraChannel,调用其takePicture方法:
+
+``` C
+/*===========================================================================
+ * FUNCTION   : takePicture
+ *
+ * DESCRIPTION: send request for queued snapshot frames
+ *
+ * PARAMETERS :
+ *   @buf : request buf info
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t QCameraPicChannel::takePicture (mm_camera_req_buf_t *buf)
+{
+    uint32_t snapshotHandle = getSnapshotHandle();
+    LOGD("mSnapshotHandle = 0x%x", snapshotHandle);
+    int32_t rc = m_camOps->request_super_buf(m_camHandle, snapshotHandle, buf);
+    return rc;
+}
+```
+
+下面的调用就又进入了mm-camera-interface了,通过mm_camera_channel获取到super_buf,里面不再深入了.
+QCamera2HardwareInterface的takePicture方法首先是创建一个QCameraChannel,开始一个无压缩的RAW管道,调用takePicture方法获取到buffer,最后等待延迟任务mJpegJob创建Jpeg.
+
+### 结果同步
+拍照方法基本完成了,再看一下回调.QCameraStateMachine调用QCamera2HardwareInterface的takePicture后又调用了signalAPIResult方法发送结果:
+
+``` C
+void QCamera2HardwareInterface::signalAPIResult(qcamera_api_result_t *result)
+{
+
+    pthread_mutex_lock(&m_lock);
+    api_result_list *apiResult = (api_result_list *)malloc(sizeof(api_result_list));
+    if (apiResult == NULL) {
+        LOGE("ERROR: malloc for api result failed, Result will not be sent");
+        goto malloc_failed;
+    }
+    apiResult->result = *result;
+    apiResult->next = NULL;
+    if (m_apiResultList == NULL) m_apiResultList = apiResult;
+    else {
+        api_result_list *apiResultList = m_apiResultList;
+        while(apiResultList->next != NULL) apiResultList = apiResultList->next;
+        apiResultList->next = apiResult;
+    }
+malloc_failed:
+    pthread_cond_broadcast(&m_cond);
+    pthread_mutex_unlock(&m_lock);
+}
+```
+把result给m_apiResultList的末尾.
+
+回到初始QCamera2HardwareInterface的take_picture方法,其最后用waitAPIResult等待结果返回.看这个方法:
+
+``` C
+/*===========================================================================
+ * FUNCTION   : waitAPIResult
+ *
+ * DESCRIPTION: wait for API result coming back. This is a blocking call, it will
+ *              return only cerntain API event type arrives
+ *
+ * PARAMETERS :
+ *   @api_evt : API event type
+ *
+ * RETURN     : none
+ *==========================================================================*/
+void QCamera2HardwareInterface::waitAPIResult(qcamera_sm_evt_enum_t api_evt,
+        qcamera_api_result_t *apiResult)
+{
+    LOGD("wait for API result of evt (%d)", api_evt);
+    int resultReceived = 0;
+    while  (!resultReceived) {
+        pthread_cond_wait(&m_cond, &m_lock);
+        if (m_apiResultList != NULL) {
+            api_result_list *apiResultList = m_apiResultList;
+            api_result_list *apiResultListPrevious = m_apiResultList;
+            while (apiResultList != NULL) {
+                if (apiResultList->result.request_api == api_evt) {
+                    resultReceived = 1;
+                    *apiResult = apiResultList->result;
+                    apiResultListPrevious->next = apiResultList->next;
+                    if (apiResultList == m_apiResultList) {
+                        m_apiResultList = apiResultList->next;
+                    }
+                    free(apiResultList);
+                    break;
+                }
+                else {
+                    apiResultListPrevious = apiResultList;
+                    apiResultList = apiResultList->next;
+                }
+            }
+        }
+    }
+    LOGD("return (%d) from API result wait for evt (%d)",
+           apiResult->status, api_evt);
+}
+```
+这个方发是阻塞的,直到有对应消息返回,通过signalAPIResult方法拍照完成的消息传递过去了,这时候我们就能通过waitAPIResult获取到结果了.
+
+
+### 流程总结
+
+hal层拍照流程:
+
+1. QCamera2HardwareInterface调用take_picture方法,调用processAPI发出QCAMERA_SM_EVT_TAKE_PICTURE请求,使用waitAPIResult等待结果
+2. processAPI调用QCameraStateMachine的proAPI,proAPI给QCameraQueue添加一个qcamera_sm_cmd_t,然后用信号量同步
+3. QCameraStateMachine周期方法smEvtProcRoutine根据信号量从QCameraQueue中取出命令,交给stateMachine方法执行
+4. stateMachine根据对应状态执行方法,如果在preview状态,则设置为拍照进行状态,调用QCamera2HardwareInterface的takePicture方法完成后调用signalAPIResult同步结果
+5. takePicture方法内部过程是创建一个QCameraChannel,使用无压缩的管道,调用QCameraChannel的takePicture方法获取buffer,等待创建Jpeg的任务完成
+6. waitAPIResult收到对应请求的结果,take_picture方法完成,返回请求结果.

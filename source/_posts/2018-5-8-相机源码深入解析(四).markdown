@@ -15,8 +15,8 @@ tags:
 ## 相机服务过程
 
 ### 服务注册及启动
-AndroidServer在7.0之前是在MediaServer里,7.0改成了单独的Server.我们看最新的8.0的代码.
-CameraServer定义在framework/av/camera.看cameraserver的make文件:
+CameraServer在7.0之前是在MediaServer里,7.0改成了单独的Server.我们看最新的8.0的代码.
+CameraServer定义在framework/av/camera/cameraserver.看cameraserver的make文件:
 
 ``` C
     LOCAL_PATH:= $(call my-dir)
@@ -1112,7 +1112,7 @@ status_t CameraHardwareInterface::initialize(sp<CameraProviderManager> manager) 
 
 ### 流程总结
 总结一下打开相机整体流程:
-1. Camera.app调用jni方法打开相机
+1. Camera.java调用android_hardware_Camera.cpp中的jni方法打开相机
 2. native层通过binder代理连接到CameraService
 3. CameraService生成一个CameraClient
 4. CameraClient生成一个CameraHardwareInterface
