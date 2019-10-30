@@ -1,0 +1,116 @@
+---
+title:      "ubuntu下载安装OpenCV并在Clion中使用"
+description:   "ubuntu软件安装基本流程和问题解决"
+date:       2019-10-26 12:00:00
+author:     "安地"
+tags:
+      - OpenCV 
+      - C 
+      - 音视频
+
+---
+
+
+## cmake下载安装
+
+
+https://cmake.org/download/
+
+通过apt-get获取的不是最新版本，就去官网下载最新版本3.16.0-rc2。
+
+解压后直接到bash.rc 配置环境变量就可以了
+
+PATH=/home/cmake-3.16.0-rc2-Linux-x86_64/bin:$PATH
+
+到命令行输入cmake版本会显示3.16.0-rc2
+
+## 下载 OpenCV
+
+
+直接官网转github下载release版本，最新版本4.1.2
+
+https://github.com/opencv/opencv/releases
+
+https://github.com/opencv/opencv_contrib/releases
+
+opencv_contrib是一些额外的模块，也需要使用，就也下载了。
+
+
+
+## 安装 OpenCV
+
+进入OpenCV根目录，走一下流程即可。
+
+mrdir build
+cd build
+cmake ..
+make 
+make install
+
+make install可能需要root权限，前面加sudo 。
+
+## 安装 opencv_contrib
+
+$ cd <opencv_build_directory>
+$ cmake -DOPENCV_EXTRA_MODULES_PATH=<opencv_contrib>/modules <opencv_source_directory>
+$ make -j5
+
+github上提示的安装步骤如上。
+
+到opencv_contrib目录，其实也是这几个步骤。
+
+mrdir build
+cd build
+cmake ..
+make 
+make install
+
+
+但cmake这一步要用opencv_source_directory（即opencv的源码路径）编译opencv_contrib的module下的模块。
+
+## 创建Clion工程
+
+创建一个工程，比如opencvtest
+
+然后配置cmakelist：
+
+```
+cmake_minimum_required(VERSION 3.13)
+project(opencvtest)
+
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+
+set(CMAKE_CXX_STANDARD 14)
+
+add_executable(opencvtest main.cpp)
+
+target_link_libraries(opencvtest ${OpenCV_LIBS})
+
+```
+随便找了下实例代码，在main.cpp添加：
+
+
+```C
+#include <iostream>
+#include <vector>
+#include "opencv2/core/core.hpp"
+#include "opencv2/opencv.hpp"
+#include "opencv2/highgui/highgui.hpp"
+using namespace std;
+using namespace cv;
+int main() {
+    Mat img = imread("../test.jpg");
+    namedWindow("DisplayImage");
+    imshow("Cat", img);
+    waitKey();
+    return 0;
+}
+```
+就可以run起来。
+
+Mat是opencv的数据类型，namedWindow创建显示创建，imshow显示图片，然后等待操作，返回。
+
+## 总结
+
+ubuntu上配置软件比较方便，一般几招，apt-get，官网下载，release版本配置path直接使用，源码版本自己make使用。

@@ -1,0 +1,824 @@
+---
+title:      "视频滤镜框架movit介绍与流程解析"
+description:   "高性能的OpenGL特效框架的内部原理"
+date:       2019-10-27 14:00:00
+author:     "安地"
+tags:
+      - C
+      - 音视频
+      - OpenGl
+---
+
+
+## 基础介绍
+
+官方介绍：A library for high-quality, high-performance video filters。
+一个高质量高性能的视频滤镜框架，采用GNU2协议。
+
+源码链接：
+<https://git.sesse.net/?p=movit;a=summary>
+
+采用C++编写，官方讲解基本没有，网上信息很少，只能靠源码了解了。
+
+## 类定义和结构
+
+先看make文件Makefile.in：
+```C
+HDRS = effect_chain.h effect_util.h effect.h input.h image_format.h init.h util.h defs.h resource_pool.h fp16.h ycbcr.h version.h
+HDRS += $(INPUTS:=.h)
+HDRS += $(EFFECTS:=.h)
+```
+
+这些就是movit的主要流程代码了.Effect_chain为核心，effect为基础单位，输入工具类为辅助，组合成了一个链式结构框架。
+
+其余都是effect和input各种类型的实例，还有测试代码和着色器代码，可以先忽略。
+
+### Effect
+
+特效的基本单位，定义了一些公共的方法，对于一个OpenGL程序，需要顶点着色器，片段着色器，传入参数。
+
+```C
+	virtual void inform_input_size(unsigned input_num, unsigned width, unsigned height) {}
+
+	// How many inputs this effect will take (a fixed number).
+	// If you have only one input, it will be called INPUT() in GLSL;
+	// if you have several, they will be INPUT1(), INPUT2(), and so on.
+	virtual unsigned num_inputs() const { return 1; }
+
+	// Inform the effect that it has been just added to the EffectChain.
+	// The primary use for this is to store the ResourcePool uesd by
+	// the chain; for modifications to it, rewrite_graph() below
+	// is probably a better fit.
+	virtual void inform_added(EffectChain *chain) {}
+
+	// Let the effect rewrite the effect chain as it sees fit.
+	// Most effects won't need to do this, but this is very useful
+	// if you have an effect that consists of multiple sub-effects
+	// (for instance, two passes). The effect is given to its own
+	// pointer, and it can add new ones (by using add_node()
+	// and connect_node()) as it sees fit. This is called at
+	// EffectChain::finalize() time, when the entire graph is known,
+	// in the order that the effects were originally added.
+	//
+	// Note that if the effect wants to take itself entirely out
+	// of the chain, it must set “disabled” to true and then disconnect
+	// itself from all other effects.
+	virtual void rewrite_graph(EffectChain *graph, Node *self) {}
+
+	// Returns the GLSL fragment shader string for this effect.
+	virtual std::string output_fragment_shader() = 0;
+
+	// Set all OpenGL state that this effect needs before rendering.
+	// The default implementation sets one uniform per registered parameter,
+	// but no other state.
+	//
+	// <sampler_num> is the first free texture sampler. If you want to use
+	// textures, you can bind a texture to GL_TEXTURE0 + <sampler_num>,
+	// and then increment the number (so that the next effect in the chain
+	// will use a different sampler).
+	virtual void set_gl_state(GLuint glsl_program_num, const std::string& prefix, unsigned *sampler_num);
+
+	// If you set any special OpenGL state in set_gl_state(), you can clear it
+	// after rendering here. The default implementation does nothing.
+	virtual void clear_gl_state();
+
+	// Set a parameter; intended to be called from user code.
+	// Neither of these take ownership of the pointer.
+	virtual bool set_int(const std::string &key, int value) MUST_CHECK_RESULT;
+	virtual bool set_ivec2(const std::string &key, const int *values) MUST_CHECK_RESULT;
+	virtual bool set_float(const std::string &key, float value) MUST_CHECK_RESULT;
+	virtual bool set_vec2(const std::string &key, const float *values) MUST_CHECK_RESULT;
+	virtual bool set_vec3(const std::string &key, const float *values) MUST_CHECK_RESULT;
+	virtual bool set_vec4(const std::string &key, const float *values) MUST_CHECK_RESULT;
+```
+
+rewrite_graph可以重写有向图，num_inputs返回输入节点个数，默认为1，set_gl_state是渲软前设置状态，可以动态设置参数。set_int等就是设置具体类型参数了。
+
+### Input
+
+Input继承了Effect，num_inputs设置为0，get_color_space返回色彩空间，get_gamma_curve返回伽马曲线，用于色彩校正。
+
+```C
+class Input : public Effect {
+public:
+	unsigned num_inputs() const override { return 0; }
+
+	// Whether this input can deliver linear gamma directly if it's
+	// asked to. (If so, set the parameter “output_linear_gamma”
+	// to activate it.)
+	virtual bool can_output_linear_gamma() const = 0;
+
+	// Whether this input can supply mipmaps if asked to (by setting
+	// the "needs_mipmaps" integer parameter set to 1).
+	virtual bool can_supply_mipmaps() const { return true; }
+
+	virtual unsigned get_width() const = 0;
+	virtual unsigned get_height() const = 0;
+	virtual Colorspace get_color_space() const = 0;
+	virtual GammaCurve get_gamma_curve() const = 0;
+};
+```
+
+
+### image_format
+
+image_format定义了一些结构体，色彩显示相关的。
+
+```C
+enum MovitPixelFormat {
+	FORMAT_RGB,
+	FORMAT_RGBA_PREMULTIPLIED_ALPHA,
+	FORMAT_RGBA_POSTMULTIPLIED_ALPHA,
+	FORMAT_BGR,
+	FORMAT_BGRA_PREMULTIPLIED_ALPHA,
+	FORMAT_BGRA_POSTMULTIPLIED_ALPHA,
+	FORMAT_GRAYSCALE,
+	FORMAT_RG,
+	FORMAT_R
+};
+
+enum Colorspace {
+	COLORSPACE_INVALID = -1,  // For internal use.
+	COLORSPACE_sRGB = 0,
+	COLORSPACE_REC_709 = 0,  // Same as sRGB.
+	COLORSPACE_REC_601_525 = 1,
+	COLORSPACE_REC_601_625 = 2,
+	COLORSPACE_XYZ = 3,  // Mostly useful for testing and debugging.
+	COLORSPACE_REC_2020 = 4,
+};
+
+enum GammaCurve {
+	GAMMA_INVALID = -1,  // For internal use.
+	GAMMA_LINEAR = 0,
+	GAMMA_sRGB = 1,
+	GAMMA_REC_601 = 2,
+	GAMMA_REC_709 = 2,  // Same as Rec. 601.
+	GAMMA_REC_2020_10_BIT = 2,  // Same as Rec. 601.
+	GAMMA_REC_2020_12_BIT = 3,
+};
+
+enum YCbCrLumaCoefficients {
+	YCBCR_REC_601 = 0,
+	YCBCR_REC_709 = 1,
+	YCBCR_REC_2020 = 2,
+};
+
+struct ImageFormat {
+	Colorspace color_space;
+	GammaCurve gamma_curve;
+};
+```
+
+MovitPixelFormat是像素顺序结构，Colorspace是色彩空间，GammaCurve是伽马值，GAMMA_sRGB为1不校正。YCbCrLumaCoefficients是yuv亮度系数。
+
+### utils
+
+包含一些工具方法。
+
+```C
+...
+std::string read_file(const std::string &filename);
+GLuint compile_shader(const std::string &shader_src, GLenum type);
+// Output a GLSL 3x3 matrix declaration.
+std::string output_glsl_mat3(const std::string &name, const Eigen::Matrix3d &m);
+
+// Output GLSL scalar, 2-length and 3-length vector declarations.
+std::string output_glsl_float(const std::string &name, float x);
+std::string output_glsl_vec2(const std::string &name, float x, float y);
+std::string output_glsl_vec3(const std::string &name, float x, float y, float z);
+```
+
+包括文件读取和gl操作的一些工具类。compile_shader编译shader，参数分别是shader的string和shader类型。
+output_glsl_float等几个方法根据参数自动生成对应的glsl代码，实现如下：
+
+```C
+string output_glsl_float(const string &name, float x)
+{
+	// Use stringstream to be independent of the current locale in a thread-safe manner.
+	stringstream ss;
+	ss.imbue(locale("C"));
+	ss.precision(8);
+	ss << scientific;
+	ss << "const float " << name << " = " << x << ";\n";
+	return ss.str();
+}
+```
+
+### ResourcePool
+在多个EffectChains之间共享资源的类，如果有资源在多个EffectChain都要使用，每次获取释放会非常消耗资源，所以可以用ResourcePool，但是所有的EffectChains必须使用共享的OpenGLContext。
+
+看公共方法：
+
+```C
+class ResourcePool {
+public:
+	ResourcePool(size_t program_freelist_max_length = 100,
+	             size_t texture_freelist_max_bytes = 100 << 20,  // 100 MB.
+	             size_t fbo_freelist_max_length = 100,  // Per context.
+	             size_t vao_freelist_max_length = 100);  // Per context.
+	~ResourcePool();
+
+	GLuint compile_glsl_program(const std::string& vertex_shader,
+	                            const std::string& fragment_shader,
+	                            const std::vector<std::string>& frag_shader_outputs);
+	void release_glsl_program(GLuint glsl_program_num);
+
+	GLuint compile_glsl_compute_program(const std::string& compile_shader);
+	void release_glsl_compute_program(GLuint glsl_program_num);
+
+	GLuint use_glsl_program(GLuint glsl_program_num);
+	void unuse_glsl_program(GLuint instance_program_num);
+
+	GLuint create_2d_texture(GLint internal_format, GLsizei width, GLsizei height);
+	void release_2d_texture(GLuint texture_num);
+
+	GLuint create_fbo(GLuint texture0_num,
+	                  GLuint texture1_num = 0,
+	                  GLuint texture2_num = 0,
+	                  GLuint texture3_num = 0);
+	void release_fbo(GLuint fbo_num);
+
+	GLuint create_vec2_vao(const std::set<GLint> &attribute_indices,
+	                       GLuint vbo_num);
+	void release_vec2_vao(const GLuint vao_num);
+
+	void clean_context();
+```
+
+可以缓存glsl程序，纹理，FBO，VAO。
+
+### YCbCrInput
+
+yuv输入类。一个重点是格式设置，一个重点是看片段着色器
+
+
+```C
+string YCbCrInput::output_fragment_shader()
+{
+	string frag_shader;
+
+	if (ycbcr_input_splitting == YCBCR_INPUT_INTERLEAVED) {
+		frag_shader += "#define Y_CB_CR_SAME_TEXTURE 1\n";
+	} else if (ycbcr_input_splitting == YCBCR_INPUT_SPLIT_Y_AND_CBCR) {
+		cb_cr_offsets_equal =
+			(fabs(ycbcr_format.cb_x_position - ycbcr_format.cr_x_position) < 1e-6) &&
+			(fabs(ycbcr_format.cb_y_position - ycbcr_format.cr_y_position) < 1e-6);
+		char buf[256];
+		snprintf(buf, sizeof(buf), "#define Y_CB_CR_SAME_TEXTURE 0\n#define CB_CR_SAME_TEXTURE 1\n#define CB_CR_OFFSETS_EQUAL %d\n",
+			cb_cr_offsets_equal);
+		frag_shader += buf;
+	} else {
+		frag_shader += "#define Y_CB_CR_SAME_TEXTURE 0\n#define CB_CR_SAME_TEXTURE 0\n";
+	}
+
+	frag_shader += read_file("ycbcr_input.frag");
+	frag_shader += "#undef CB_CR_SAME_TEXTURE\n#undef Y_CB_CR_SAME_TEXTURE\n";
+	return frag_shader;
+}
+```
+
+里面读取了ycbcr_input.frag,看对应源码：
+
+```glsl
+vec4 FUNCNAME(vec2 tc) {
+	// OpenGL's origin is bottom-left, but most graphics software assumes
+	// a top-left origin. Thus, for inputs that come from the user,
+	// we flip the y coordinate.
+	tc.y = 1.0 - tc.y;
+
+	vec3 ycbcr;
+#if Y_CB_CR_SAME_TEXTURE
+	ycbcr = tex2D(PREFIX(tex_y), tc).xyz;
+#else
+	ycbcr.x = tex2D(PREFIX(tex_y), tc).x;
+  #if CB_CR_SAME_TEXTURE
+    #if CB_CR_OFFSETS_EQUAL
+	ycbcr.yz = tex2D(PREFIX(tex_cbcr), tc + PREFIX(cb_offset)).xy;
+    #else
+	ycbcr.y = tex2D(PREFIX(tex_cbcr), tc + PREFIX(cb_offset)).x;
+	ycbcr.z = tex2D(PREFIX(tex_cbcr), tc + PREFIX(cr_offset)).x;
+    #endif
+  #else
+	ycbcr.y = tex2D(PREFIX(tex_cb), tc + PREFIX(cb_offset)).x;
+	ycbcr.z = tex2D(PREFIX(tex_cr), tc + PREFIX(cr_offset)).x;
+  #endif
+#endif
+
+	ycbcr -= PREFIX(offset);
+
+	vec4 rgba;
+	rgba.rgb = PREFIX(inv_ycbcr_matrix) * ycbcr;
+	rgba.a = 1.0;
+	return rgba;
+}
+```
+
+这里有两个纹理输入，PREFIX(tex_y)和(PREFIX(tex_cbcr)，PREFIX是预处理标记，因为会对应多个Effect，shader代码会处理一遍防止重名等问题。
+有y和ub的纹理就可以通过偏移量获取到yuv数据，然后通过转换矩阵转成rgb数据。
+
+### EffectChain
+
+最后介绍最重要的EffectChain，效果链，实际结构是有向图，节点Node定义：
+
+```C
+class Node {
+public:
+	Effect *effect;
+	bool disabled;
+
+	// Edges in the graph (forward and backward).
+	std::vector<Node *> outgoing_links;
+	std::vector<Node *> incoming_links;
+
+	// For unit tests only. Do not use from other code.
+	// Will contain an arbitrary choice if the node is in multiple phases.
+	Phase *containing_phase;
+
+private:
+    ...
+};
+```
+Node是双向链表结构，而且输入和输出节点都可以是多个。
+
+多个Node可以组成Phase，包含一个单独的glsl程序。所有的节点组成EffectChain，有时有些glsl程序输入发生了变化，不得不用多个glsl程序，就需要用到phase.
+
+```C
+struct Phase {
+	Node *output_node;
+
+	GLuint glsl_program_num;  // Owned by the resource_pool.
+
+	// Position and texcoord attribute indexes, although it doesn't matter
+	// which is which, because they contain the same data.
+	std::set<GLint> attribute_indexes;
+
+	// Inputs are only inputs from other phases (ie., those that come from RTT);
+	// input textures are counted as part of <effects>.
+	std::vector<Phase *> inputs;
+	// Bound sampler numbers for each input. Redundant in a sense
+	// (it always corresponds to the index), but we need somewhere
+	// to hold the value for the uniform.
+	std::vector<int> input_samplers;
+	std::vector<Node *> effects;  // In order.
+	unsigned output_width, output_height, virtual_output_width, virtual_output_height;
+
+	// Whether this phase is compiled as a compute shader, ie., the last effect is
+	// marked as one.
+	bool is_compute_shader;
+	Node *compute_shader_node;
+
+	// If <is_compute_shader>, which image unit the output buffer is bound to.
+	// This is used as source for a Uniform<int> below.
+	int outbuf_image_unit;
+
+	// These are used in transforming from unnormalized to normalized coordinates
+	// in compute shaders.
+	int uniform_output_size[2];
+	Point2D inv_output_size, output_texcoord_adjust;
+
+	// Identifier used to create unique variables in GLSL.
+	// Unique per-phase to increase cacheability of compiled shaders.
+	std::map<std::pair<Node *, NodeLinkType>, std::string> effect_ids;
+
+	// Uniforms for this phase; combined from all the effects.
+	std::vector<Uniform<int>> uniforms_image2d;
+	std::vector<Uniform<int>> uniforms_sampler2d;
+	std::vector<Uniform<bool>> uniforms_bool;
+	std::vector<Uniform<int>> uniforms_int;
+	std::vector<Uniform<int>> uniforms_ivec2;
+	std::vector<Uniform<float>> uniforms_float;
+	std::vector<Uniform<float>> uniforms_vec2;
+	std::vector<Uniform<float>> uniforms_vec3;
+	std::vector<Uniform<float>> uniforms_vec4;
+	std::vector<Uniform<Eigen::Matrix3d>> uniforms_mat3;
+
+	// For measurement of GPU time used.
+	std::list<GLuint> timer_query_objects_running;
+	std::list<GLuint> timer_query_objects_free;
+	uint64_t time_elapsed_ns;
+	uint64_t num_measured_iterations;
+};
+```
+
+包含glsl程序需要的要素，按顺序的Effect节点，输入必须也是Phase，输出是Node。
+
+```C
+class EffectChain {
+public:
+	EffectChain(float aspect_nom, float aspect_denom, ResourcePool *resource_pool = nullptr);
+	~EffectChain();
+
+
+	Input *add_input(Input *input);
+
+	Effect *add_effect(Effect *effect) {
+		return add_effect(effect, last_added_effect());
+	}
+	Effect *add_effect(Effect *effect, Effect *input) {
+		std::vector<Effect *> inputs;
+		inputs.push_back(input);
+		return add_effect(effect, inputs);
+	}
+	Effect *add_effect(Effect *effect, Effect *input1, Effect *input2) {
+		std::vector<Effect *> inputs;
+		inputs.push_back(input1);
+		inputs.push_back(input2);
+		return add_effect(effect, inputs);
+	}
+	Effect *add_effect(Effect *effect, Effect *input1, Effect *input2, Effect *input3) {
+		std::vector<Effect *> inputs;
+		inputs.push_back(input1);
+		inputs.push_back(input2);
+		inputs.push_back(input3);
+		return add_effect(effect, inputs);
+	}
+	Effect *add_effect(Effect *effect, Effect *input1, Effect *input2, Effect *input3, Effect *input4) {
+		std::vector<Effect *> inputs;
+		inputs.push_back(input1);
+		inputs.push_back(input2);
+		inputs.push_back(input3);
+		inputs.push_back(input4);
+		return add_effect(effect, inputs);
+	}
+	Effect *add_effect(Effect *effect, Effect *input1, Effect *input2, Effect *input3, Effect *input4, Effect *input5) {
+		std::vector<Effect *> inputs;
+		inputs.push_back(input1);
+		inputs.push_back(input2);
+		inputs.push_back(input3);
+		inputs.push_back(input4);
+		inputs.push_back(input5);
+		return add_effect(effect, inputs);
+	}
+	Effect *add_effect(Effect *effect, const std::vector<Effect *> &inputs);
+
+	void add_output(const ImageFormat &format, OutputAlphaFormat alpha_format);
+
+	void add_ycbcr_output(const ImageFormat &format, OutputAlphaFormat alpha_format,
+	                      const YCbCrFormat &ycbcr_format,
+			      YCbCrOutputSplitting output_splitting = YCBCR_OUTPUT_INTERLEAVED,
+	                      GLenum output_type = GL_UNSIGNED_BYTE);
+
+	void change_ycbcr_output_format(const YCbCrFormat &ycbcr_format);
+
+	void set_dither_bits(unsigned num_bits)
+	{
+		this->num_dither_bits = num_bits;
+	}
+
+	void set_output_origin(OutputOrigin output_origin)
+	{
+		this->output_origin = output_origin;
+	}
+
+	void set_intermediate_format(
+		GLenum intermediate_format,
+		FramebufferTransformation transformation = NO_FRAMEBUFFER_TRANSFORMATION)
+	{
+		this->intermediate_format = intermediate_format;
+		this->intermediate_transformation = transformation;
+	}
+
+	void finalize();
+
+	void enable_phase_timing(bool enable);
+	void reset_phase_timing();
+	void print_phase_timing();
+
+	void render_to_screen()
+	{
+		render_to_fbo(0, 0, 0);
+	}
+
+	void render_to_fbo(GLuint fbo, unsigned width, unsigned height);
+
+	struct DestinationTexture {
+		GLuint texnum;
+		GLenum format;
+	};
+	void render_to_texture(const std::vector<DestinationTexture> &destinations, unsigned width, unsigned height);
+
+	Effect *last_added_effect() {
+		if (nodes.empty()) {
+			return nullptr;
+		} else {
+			return nodes.back()->effect;
+		}	
+	}
+
+	Node *add_node(Effect *effect);
+	void connect_nodes(Node *sender, Node *receiver);
+	void replace_receiver(Node *old_receiver, Node *new_receiver);
+	void replace_sender(Node *new_sender, Node *receiver);
+	void insert_node_between(Node *sender, Node *middle, Node *receiver);
+	Node *find_node_for_effect(Effect *effect) { return node_map[effect]; }
+
+	GLenum get_input_sampler(Node *node, unsigned input_num) const;
+
+	GLenum has_input_sampler(Node *node, unsigned input_num) const;
+
+	ResourcePool *get_resource_pool() { return resource_pool; }
+```
+
+add_effect添加特效方法，finalize是生成glsl程序的方法，render_to_screen和render_to_fbo是渲染的方法，connect_nodes可以把输入和输出节点连接起来。
+
+### 其它
+
+fp16是16位和32为数据转换工具类，defs和version
+
+
+## 处理流程
+
+
+### finalize
+
+
+EffectChain.cpp中有两千多行代码，看重要流程代码，理解整体过程。生成EffectChain会进行添加节点，包括节点之间的连接关系，完成后就调用finalize组装，对应代码：
+
+```C
+void EffectChain::finalize()
+{
+	for (unsigned i = 0; i < nodes.size(); ++i) {
+		nodes[i]->effect->rewrite_graph(this, nodes[i]);
+	}
+
+	find_color_spaces_for_inputs();
+
+	propagate_alpha();
+
+	propagate_gamma_and_color_space();
+
+	fix_internal_color_spaces();
+	fix_internal_alpha(6);
+	fix_output_color_space();
+	fix_output_alpha();
+
+	fix_internal_gamma_by_asking_inputs(9);
+	fix_internal_gamma_by_inserting_nodes(10);
+	fix_output_gamma();
+	propagate_alpha();
+	fix_internal_alpha(13);
+	fix_internal_gamma_by_asking_inputs(15);
+	fix_internal_gamma_by_inserting_nodes(16);
+
+	add_ycbcr_conversion_if_needed();
+
+	add_dither_if_needed();
+
+	add_dummy_effect_if_needed();
+
+	
+	map<Node *, Phase *> completed_effects;
+	construct_phase(find_output_node(), &completed_effects);
+
+	if (has_dummy_effect && !phases[phases.size() - 2]->is_compute_shader) {
+		resource_pool->release_glsl_program(phases.back()->glsl_program_num);
+		delete phases.back();
+		phases.pop_back();
+		has_dummy_effect = false;
+	}
+
+	assert(phases[0]->inputs.empty());
+	
+	finalized = true;
+}
+}
+```
+
+先遍历每个节点，进行rewrite_graph，然后进行颜色空间等设置。关键步骤是
+```C
+    construct_phase(find_output_node(), &completed_effects)；
+```    
+生成了phase结构。第一个参数是find_output_node，查找输出节点：
+
+```C
+Node *EffectChain::find_output_node()
+{
+	vector<Node *> output_nodes;
+	for (unsigned i = 0; i < nodes.size(); ++i) {
+		Node *node = nodes[i];
+		if (node->disabled) {
+			continue;
+		}
+		if (node->outgoing_links.empty()) {
+			output_nodes.push_back(node);
+		}
+	}
+	assert(output_nodes.size() == 1);
+	return output_nodes[0];
+}
+```
+
+没有输出的节点的节点就是最终的输出节点，只能有一个输出节点。
+
+第二个参数是map<Node *, Phase *>类型的地址，就是返回的数据。
+
+### construct_phase
+
+从给定的效果和随后的链开始构建glsl程序。当需要纹理bound时，就会结束一个程序，还有需要多个效果，输出大小改变时也会结束程序。
+在输出开始用一个简单的深度优先搜索，就不用在每个phase中明确的递归。
+
+主要逻辑代码，省略部分非主线流程：
+
+```C
+
+Phase *EffectChain::construct_phase(Node *output, map<Node *, Phase *> *completed_effects){
+	Phase *phase = new Phase;
+	phase->output_node = output;
+	phase->is_compute_shader = false;
+	phase->compute_shader_node = nullptr;
+	
+    stack<Node *> effects_todo_this_phase;
+	effects_todo_this_phase.push(output);
+
+	while (!effects_todo_this_phase.empty()) {
+		Node *node = effects_todo_this_phase.top();
+		effects_todo_this_phase.pop();
+
+		phase->effects.push_back(node);
+
+		// Find all the dependencies of this effect, and add them to the stack.
+		assert(node->effect->num_inputs() == node->incoming_links.size());
+		for (Node *dep : node->incoming_links) {
+			bool start_new_phase = false;
+
+			if(多种情况...){
+				start_new_phase = true;
+			}
+            
+            
+			if (start_new_phase) {
+				// Since we're starting a new phase here, we don't need to impose any
+				// new demands on this effect. Restore the status we had before we
+				// started looking at it.
+				dep->needs_mipmaps = save_needs_mipmaps;
+
+				phase->inputs.push_back(construct_phase(dep, completed_effects));
+			} else {
+				effects_todo_this_phase.push(dep);
+
+				// Propagate the one-to-one status down through the dependency.
+				dep->one_to_one_sampling = node->one_to_one_sampling &&
+					dep->effect->one_to_one_sampling();
+				dep->strong_one_to_one_sampling = node->strong_one_to_one_sampling &&
+					dep->effect->strong_one_to_one_sampling();
+			}
+
+			node->incoming_link_type.push_back(start_new_phase ? IN_ANOTHER_PHASE : IN_SAME_PHASE);
+		}
+	}
+	
+	...
+	compile_glsl_program(phase);
+	
+	phases.push_back(phase);
+    return phase;
+}    
+```
+
+从输出开始为phase添加节点，判断情况进行中断，如果需要添加新phase，则为新phase递归执行construct_phase方法，否则在当前处理node中添加节点，继续while循环。
+
+### compile_glsl_program
+
+下一步是为每一个phase编译glsl程序。代码量也多，都是细致的操作代码，原理就是利用c的宏定义进行动态组合成一个glsl程序，相对多个程序需要内存拷贝，这样性能大大提高。解析下关键代码。
+
+
+为每一个Node添加专属id：
+```C
+	// Give each effect in the phase its own ID.
+	for (unsigned i = 0; i < phase->effects.size(); ++i) {
+		Node *node = phase->effects[i];
+		char effect_id[256];
+		sprintf(effect_id, "eff%u", i);
+		bool inserted = phase->effect_ids.insert(make_pair(make_pair(node, IN_SAME_PHASE), effect_id)).second;
+		assert(inserted);
+	}
+```
+
+为每个节点添加一个方法：
+
+```C
+	for (unsigned i = 0; i < phase->effects.size(); ++i) {
+		Node *node = phase->effects[i];
+		const string effect_id = phase->effect_ids[make_pair(node, IN_SAME_PHASE)];
+		for (unsigned j = 0; j < node->incoming_links.size(); ++j) {
+			if (node->incoming_links.size() == 1) {
+				frag_shader += "#define INPUT";
+			} else {
+				char buf[256];
+				sprintf(buf, "#define INPUT%d", j + 1);
+				frag_shader += buf;
+			}
+
+			Node *input = node->incoming_links[j];
+			NodeLinkType link_type = node->incoming_link_type[j];
+			if (i != 0 &&
+			    input->effect->is_compute_shader() &&
+			    node->incoming_link_type[j] == IN_SAME_PHASE) {
+				// First effect after the compute shader reads the value
+				// that cs_output() wrote to a global variable,
+				// ignoring the tc (since all such effects have to be
+				// strong one-to-one).
+				frag_shader += "(tc) CS_OUTPUT_VAL\n";
+			} else {
+				assert(phase->effect_ids.count(make_pair(input, link_type)));
+				frag_shader += string(" ") + phase->effect_ids[make_pair(input, link_type)] + "\n";
+			}
+		}
+	
+		frag_shader += "\n";
+		frag_shader += string("#define FUNCNAME ") + effect_id + "\n";
+		if (node->effect->is_compute_shader()) {
+			frag_shader += string("#define NORMALIZE_TEXTURE_COORDS(tc) ((tc) * ") + effect_id + "_inv_output_size + " + effect_id + "_output_texcoord_adjust)\n";
+		}
+		frag_shader += replace_prefix(node->effect->output_fragment_shader(), effect_id);
+		frag_shader += "#undef FUNCNAME\n";
+		if (node->incoming_links.size() == 1) {
+			frag_shader += "#undef INPUT\n";
+		} else {
+			for (unsigned j = 0; j < node->incoming_links.size(); ++j) {
+				char buf[256];
+				sprintf(buf, "#undef INPUT%d\n", j + 1);
+				frag_shader += buf;
+			}
+		}
+		frag_shader += "\n";
+	}
+```
+
+后面还有参数设置方法，组装后片段着色器代码后会编译glsl程序，然后获取参数位置，留待使用，不一一介绍了。
+
+组合成的glsl片段着色器实例：
+```glsl
+    precision highp float;
+    varying vec2 tc;
+    
+    #define FUNCNAME eff0
+    uniform sampler2D eff0_tex;
+    vec4 FUNCNAME(vec2 tc) {
+        return texture2D(eff0_tex, vec2(tc.x,1.0-tc.y));
+    }
+    #undef PREFIX
+    #undef FUNCNAME
+    
+    #define INPUT eff0
+    
+    #define FUNCNAME eff1
+    uniform float eff1_strength;
+    uniform sampler2D eff1_lut;
+    vec4 FUNCNAME(vec2 tc) { float strength = eff1_strength; lowp vec4 textureColor = INPUT(tc); mediump float blueColor = textureColor.b * 63.0; mediump vec2 quad1; quad1.y = floor(floor(blueColor) / 8.0); quad1.x = floor(blueColor) - (quad1.y * 8.0); mediump vec2 quad2; quad2.y = floor(ceil(blueColor) / 8.0); quad2.x = ceil(blueColor) - (quad2.y * 8.0); highp vec2 texPos1; texPos1.x = (quad1.x * 0.125) + 0.5/512.0 + ((0.125 - 1.0/512.0) * textureColor.r); texPos1.y = (quad1.y * 0.125) + 0.5/512.0 + ((0.125 - 1.0/512.0) * textureColor.g); highp vec2 texPos2; texPos2.x = (quad2.x * 0.125) + 0.5/512.0 + ((0.125 - 1.0/512.0) * textureColor.r); texPos2.y = (quad2.y * 0.125) + 0.5/512.0 + ((0.125 - 1.0/512.0) * textureColor.g); lowp vec4 newColor1 = texture2D(eff1_lut, texPos1); lowp vec4 newColor2 = texture2D(eff1_lut, texPos2); lowp vec4 newColor = mix(newColor1, newColor2, fract(blueColor)); return mix(textureColor, vec4(newColor.rgb, textureColor.w), strength); } 
+    #undef PREFIX
+    #undef FUNCNAME
+    #undef INPUT
+    
+    #define INPUT eff1
+    void main()
+    {
+        gl_FragColor = INPUT(tc);
+    }
+```
+
+### render
+
+opengl渲软流程都一样，但这里都多个phase，前面的phase需要先绘制在纹理上，最后一个phase绘制在目标fbo上，纹理采用resource_pool获取创建的纹理，可以缓存复用。
+
+```C
+        if (last_phase) {
+            // Last phase goes to the output the user specified.
+            if (!phase->is_compute_shader) {
+                assert(dest_fbo != (GLuint)-1);
+                glBindFramebuffer(GL_FRAMEBUFFER, dest_fbo);
+                check_error();
+                GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
+                assert(status == GL_FRAMEBUFFER_COMPLETE);
+                glViewport(x, y, width, height);
+            }
+            if (dither_effect != nullptr) {
+                CHECK(dither_effect->set_int("output_width", width));
+                CHECK(dither_effect->set_int("output_height", height));
+            }
+        }
+        ...
+        
+        if (!last_phase) {
+            GLuint tex_num = resource_pool->create_2d_texture(intermediate_format, phase->output_width, phase->output_height);
+            output_textures.insert(make_pair(phase, tex_num));
+            phase_destinations.push_back(DestinationTexture{ tex_num, intermediate_format });
+
+            // The output texture needs to have valid state to be written to by a compute shader.
+            glActiveTexture(GL_TEXTURE0);
+            check_error();
+            glBindTexture(GL_TEXTURE_2D, tex_num);
+            check_error();
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            check_error();
+        } else if (phase->is_compute_shader) {
+            assert(!destinations.empty());
+            phase_destinations = destinations;
+        }
+        execute_phase(phase, output_textures, phase_destinations, &generated_mipmaps);
+```
+
+execute_phase包含一些输入输出大小，参数，资源缓存等逻辑，最后调用真正的绘制代码glDrawArrays。
+
+
+

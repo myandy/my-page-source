@@ -1,0 +1,673 @@
+---
+title:      "mlt框架介绍和结构分析"
+description:   "关于mlt框架你所必须掌握的知识点"
+date:       2019-10-27 12:00:00
+author:     "安地"
+tags:
+      - 音视频  
+      - C
+
+---
+
+
+## 基础介绍
+
+
+### 基础信息
+
+官方介绍：The engine of a non-linear video editor that can be used in all sorts of apps,
+
+视频编辑引擎。由C编写，它遵循基本的面向对象设计范式，主要采用的是生产者（producer）和消费者（consumer）模型，模块功能扩展可以有producer,consumer,filter,transition，animation。MLT的功能模块扩展可以使用FFmpeg，JACK，Movit，作为插件。
+
+
+### 结构和流
+
+
+MLT“网络”的一般结构只是一个
+从“生产者”到“消费者”:
+
+	+--------+   +--------+
+	|Producer|-->|Consumer|
+	+--------+   +--------+
+
+一个典型的消费者向生产者请求MLT frame对象，执行一些操作，一帧的操作结束后，将其关闭。
+
+生产者生产MLT Frame对象，而消费者消耗MLT框架对象。
+
+过滤器也可以放在生产者和消费者之间：
+
+
+	+--------+   +------+   +--------+
+	|Producer|-->|Filter|-->|Consumer|
+	+--------+   +------+   +--------+
+
+生产者，过滤器，转换器都是服务。
+
+连接的消费者与生产者或服务之间的通信是分三个阶段进行：
+
+*获取帧数据
+*获取图像
+*获取音频
+
+
+消费者从它相连的服务去拉取数据，所以线程通常属于消费者，mlt_consumer提供一些基础功能确保实时吞吐。
+
+
+## 基础使用
+
+
+### hello world实例
+
+
+```C
+	#include <stdio.h>
+	#include <unistd.h>
+	#include <framework/mlt.h>
+
+	int main( int argc, char *argv[] )
+	{
+	    // Initialise the factory
+	    if ( mlt_factory_init( NULL ) == 0 )
+	    {
+	        // Create the default consumer
+	        mlt_consumer hello = mlt_factory_consumer( NULL, NULL );
+
+	        // Create via the default producer
+	        mlt_producer world = mlt_factory_producer( NULL, argv[ 1 ] );
+
+	        // Connect the producer to the consumer
+	        mlt_consumer_connect( hello, mlt_producer_service( world ) );
+
+	        // Start the consumer
+	        mlt_consumer_start( hello );
+
+	        // Wait for the consumer to terminate
+	        while( !mlt_consumer_is_stopped( hello ) )
+	            sleep( 1 );
+
+	        // Close the consumer
+	        mlt_consumer_close( hello );
+
+	        // Close the producer
+	        mlt_producer_close( world );
+
+	        // Close the factory
+	        mlt_factory_close( );
+	    }
+	    else
+	    {
+	        // Report an error during initialisation
+	        fprintf( stderr, "Unable to locate factory modules\n" );
+	    }
+
+	    // End of program
+	    return 0;
+	}
+```
+
+创建生产者和消费者，然后连接，再启动消费者，最后关闭，就完成一次标准调用。
+所有服务都通过工厂实例化，如
+上面的mlt_factory_consumer和mlt_factory_producer调用。
+
+### 服务属性
+
+所有的服务都有属性,通过mlt_properties_set和mlt_properties_get获取对应的键值对。
+
+```C
+mlt_properties properties = mlt_producer_properties( producer );
+
+mlt_properties_set( properties, "name", "value" );
+
+data = mlt_properties_get( properties, "name" );
+
+```
+
+### 播放列表
+
+
+可以创建一个播放列表mlt_playlist，然后通过mlt_factory_producer创建生产者添加到播放列表中。
+
+
+```C
+mlt_producer create_playlist( int argc, char **argv )
+	{
+	    // We're creating a playlist here
+	    mlt_playlist playlist = mlt_playlist_init( );
+
+	    // We need the playlist properties to ensure clean up
+	    mlt_properties properties = mlt_playlist_properties( playlist );
+
+	    // Loop through each of the arguments
+	    int i = 0;
+	    for ( i = 1; i < argc; i ++ )
+	    {
+	        // Create the producer
+	        mlt_producer producer = mlt_factory_producer( NULL, argv[ i ] );
+
+	        // Add it to the playlist
+	        mlt_playlist_append( playlist, producer );
+
+	        // Close the producer (see below)
+	        mlt_producer_close( producer );
+	    }
+
+	    // Return the playlist as a producer
+	    return mlt_playlist_producer( playlist );
+	}
+	
+```
+
+### 过滤器
+
+与生产者和消费者一样，可以通过过滤器来操作过滤器
+properties对象-可以调用mlt_filter_properties方法，并且
+属性可以根据需要设置。
+
+```C
+	    // Create a producer from something
+	    mlt_producer producer = mlt_factory_producer( ... );
+
+	    // Create a consumer from something
+	    mlt_consumer consumer = mlt_factory_consumer( ... );
+
+	    // Create a greyscale filter
+	    mlt_filter filter = mlt_factory_filter( "greyscale", NULL );
+
+	    // Connect the filter to the producer
+	    mlt_filter_connect( filter, mlt_producer_service( producer ), 0 );
+
+	    // Connect the consumer to filter
+	    mlt_consumer_connect( consumer, mlt_filter_service( filter ) );
+``` 
+
+
+
+### 混合转场
+
+混合是在播放列表上的相邻段之间引入过渡的最简单方法。
+
+mlt_playlist_mix( playlist, i, 50, transition );
+会在第i段和i+1短间加上50帧的转场，每段的时间不变，所以总长度会减少50帧。
+
+注意添上转场只能倒序。
+
+```C
+	    // Get the number of clips on the playlist
+	    int i = mlt_playlist_count( );
+
+	    // Iterate through them in reverse order
+	    while ( i -- )
+	    {
+	        // Create a transition
+	        mlt_transition transition = mlt_factory_transition( "luma", NULL );
+
+	        // Mix the first and second clips for 50 
+	        mlt_playlist_mix( playlist, i, 50, transition );
+
+	        // Close the transition
+	        mlt_transition_close( transition );
+	    }
+```
+
+### 实用性和优化
+
+当需要使用两个相同段融合转场时，为了实时渲软的效果，可以进行优化。
+遍历整个播放列表，确定重叠实例的最大数量，然后创建克隆并将克隆索引分配给对应段。
+                                 
+```C
+    // Optimise the playlist
+    mlt_producer_optimise( mlt_playlist_producer( playlist ) );
+ ```
+ 
+### 多轨道
+
+多轨道结构图：
+
+![多轨道结构](/img/mlt_1.png)
+
+调用源码：
+    
+```C
+mlt_producer create_tracks( int argc, char **argv )
+	{
+	    // Create the tractor
+	    mlt_tractor tractor = mlt_tractor_new( );
+
+	    // Obtain the field
+	    mlt_field field = mlt_tractor_field( tractor );
+	
+	    // Obtain the multitrack
+	    mlt_multitrack multitrack = mlt_tractor_multitrack( tractor );
+	
+	    // Create a composite transition
+	    mlt_transition transition = mlt_factory_transition( "composite", "10%/10%:15%x15%" );
+	
+	    // Create track 0
+	    mlt_producer track0 = create_playlist( argc, argv );
+	
+	    // Create the watermark track - note we NEED loader for scaling here
+	    mlt_producer track1 = mlt_factory_producer( "loader", "pango" );
+	
+	    // Get the length of track0
+	    mlt_position length = mlt_producer_get_playtime( track0 );
+	
+	    // Set the properties of track1
+	    mlt_properties properties = mlt_producer_properties( track1 );
+	    mlt_properties_set( properties, "text", "Hello\nWorld" );
+	    mlt_properties_set_position( properties, "in", 0 );
+	    mlt_properties_set_position( properties, "out", length - 1 );
+	    mlt_properties_set_position( properties, "length", length );
+	    mlt_properties_set_int( properties, "a_track", 0 );
+	    mlt_properties_set_int( properties, "b_track", 1 );
+
+	    // Now set the properties on the transition
+	    properties = mlt_transition_properties( transition );
+	    mlt_properties_set_position( properties, "in", 0 );
+	    mlt_properties_set_position( properties, "out", length - 1 );
+	
+	    // Add our tracks to the multitrack
+	    mlt_multitrack_connect( multitrack, track0, 0 );
+	    mlt_multitrack_connect( multitrack, track1, 1 );
+	
+	    // Now plant the transition
+	    mlt_field_plant_transition( field, transition, 0, 1 );
+
+	    // Close our references
+	    mlt_producer_close( track0 );
+	    mlt_producer_close( track1 );
+	    mlt_transition_close( transition );
+
+	    // Return the tractor
+	    return mlt_tractor_producer( tractor );
+	}
+	
+```
+
+## 结构设计
+
+
+### 类结构
+
+mlt框架包含一个OO类层次结构，该层次结构包含以下内容
+
+公共类和抽象：
+
+	mlt_properties
+	  mlt_frame
+	  mlt_service
+	    mlt_producer
+	      mlt_playlist
+	      mlt_tractor
+	    mlt_filter
+	    mlt_transition
+	    mlt_consumer
+	mlt_deque
+	mlt_pool
+	mlt_factory
+
+可以将上面定义的每个类理解为将上面的类扩展到
+左边。
+
+
+
+### mlt_properties
+
+属性类是框架和服务类的基类。
+
+它旨在为各种类型的计算机提供有效的查找表
+信息，例如字符串，整数，浮点值和指针
+数据和数据结构。
+
+所有属性均由唯一的字符串索引。
+
+
+除非属性对象关闭，否则分配的内存将保留，除非
+您指定一个析构函数。在上述情况下，可以使用以下方法完成此操作：
+
+```C
+    mlt_properties_set_data（properties，“ image”，image，size，free，NULL）;
+```
+
+### mlt_deque
+
+堆栈和队列是MLT框架中的基本组件。 为了方便，选择实施“双端队列”（双端队列）- mlt_deque这封装了两者的功能。
+
+
+### mlt_pool
+
+MLT框架通过mlt_pool提供内存池功能
+API。一旦初始化，这些可以看作是直接替换malloc / realloc / free功能。
+
+
+为了大内存分配的性能，内部有一个堆栈缓存，提升了性能。
+
+API和传统的malloc/realloc/free 调用相同:
+ 
+```C
+    void *mlt_pool_alloc( int size );
+    void *mlt_pool_realloc( void *ptr, int size );
+    void mlt_pool_release( void *release );
+```
+
+### mlt_frame
+
+结构：
+
+```
++------------+
+|frame       |
++------------+
+| properties |
+| image stack|
+| audio stack|
++------------+
+```
+
+	
+请求流程：
+
+![请求流程](/img/mlt_2.png)
+
+### mlt_service
+
+服务基类，包含扩展属性，允许多个输入和一个输出。 mlt_produce，mlt_filter，mlt_transition，mlt_consumer都继承mlt_service_s。
+
+
+```C
+struct mlt_service_s
+{
+	struct mlt_properties_s parent; /**< \private A service extends properties. */
+
+	/** Get a frame of data (virtual function).
+	 *
+	 * \param mlt_producer a producer
+	 * \param mlt_frame_ptr a frame pointer by reference
+	 * \param int an index
+	 * \return true if there was an error
+	 */
+	int ( *get_frame )( mlt_service self, mlt_frame_ptr frame, int index );
+
+	/** the destructor virtual function */
+	mlt_destructor close;
+	void *close_object; /**< the object supplied to the close virtual function */
+
+	void *local; /**< \private instance object */
+	void *child; /**< \private the object of a subclass */
+};
+```
+
+local是mlt_service_base类型，定义如下：
+
+```
+typedef struct
+{
+	int size;
+	int count;
+	mlt_service *in;
+	mlt_service out;
+	int filter_count;
+	int filter_size;
+	mlt_filter *filters;
+	pthread_mutex_t mutex;
+}
+mlt_service_base;
+
+```
+
+
+### mlt_producer
+
+一个生产者拥有0个输入和一个输出。
+
+生产者提供了文件读取，管道，流或者图片及音频输入。
+
+
+生产者，过滤器，混合器，消费者需要自己定制创建（或者使用插件提供的模板），提供了丰富的扩展性，下面介绍下自定义使用的主要流程方法，主要是get_frame和getImage：
+
+一个生产者一般对应一个frame，frame可以设置position，对应长度：
+```C
+static int producer_get_frame(mlt_producer producer, mlt_frame_ptr frame, int index) {
+
+    // Generate a frame
+    *frame = mlt_frame_init(MLT_PRODUCER_SERVICE(producer));
+    if (*frame != NULL) {
+        // Obtain properties of frame and producer
+        mlt_frame_set_position(*frame, mlt_producer_position(producer));
+        
+        mlt_frame_push_service(*frame, producer);
+        mlt_frame_push_get_image(*frame, producer_get_image);
+
+    }
+
+    // Calculate the next timecode
+    mlt_producer_prepare_next(producer);
+    return 0;
+}
+```
+
+每一次图像处理都需要走get_image,根据进度可以进行不同的处理：
+```C
+static int
+producer_get_image(mlt_frame frame, uint8_t **buffer, mlt_image_format *format, int *width,
+                   int *height, int writable) {
+
+    // Obtain properties of frame
+    //mlt_properties frame_props = MLT_FRAME_PROPERTIES(frame);
+
+    // Obtain the producer for this frame
+    //mlt_producer mlt_producer = mlt_properties_get_data(frame_props, "producer_android_jpeg", NULL);
+
+    mlt_producer producer = (mlt_producer) mlt_frame_pop_service(frame);
+    
+    //do something here
+    
+    mlt_frame_set_image(frame, *buffer, size, NULL);
+    
+return 0;
+}
+```
+
+### mlt_filter
+
+过滤器主要处理流程：
+
+处理frame：
+
+```C
+static mlt_frame process(mlt_filter filter, mlt_frame frame) {
+
+    // do something here
+
+    mlt_frame_push_service(frame, filter);
+    mlt_frame_push_get_image(frame, get_image);
+    return frame;
+}
+```
+
+处理image：
+```C
+
+static int
+get_image(mlt_frame frame, uint8_t **image, mlt_image_format *format, int *width, int *height,
+          int writable) {
+    mlt_filter filter = (mlt_filter) mlt_frame_pop_service(frame);
+
+    // do something here
+    
+    *format = mlt_image_glsl;
+    return mlt_frame_get_image(frame, image, format, width, height, writable);
+}
+
+```
+
+
+### mlt_transition
+
+混合器需要对应两个frame，处理当前a_frame时，把b_frame传给a_frame，处理frame：
+
+```C
+static mlt_frame process(mlt_transition transition, mlt_frame a_frame, mlt_frame b_frame) {
+
+    // do something here
+    
+    // Push the transition on to the frame
+    mlt_frame_push_service(a_frame, transition);
+
+    // Push the b_frame on to the stack
+    mlt_frame_push_frame(a_frame, b_frame);
+
+    // Push the transition method
+    mlt_frame_push_get_image(a_frame, get_image);
+    return a_frame;
+}
+```
+
+处理image时获取a_frame和b_frame,锁住混合器防止同时处理的异常，然后可以进行混合处理：
+
+```C
+static int
+get_image(mlt_frame a_frame, uint8_t **image, mlt_image_format *format, int *width, int *height,
+          int writable) {
+    int error = 0;
+    // Get the b frame from the stack
+    mlt_frame b_frame = (mlt_frame) mlt_frame_pop_frame(a_frame);
+
+    // Get the transition object
+    mlt_transition transition = (mlt_transition) mlt_frame_pop_service(a_frame);
+    mlt_service service = MLT_TRANSITION_SERVICE(transition);
+    mlt_service_lock(service);
+     
+    // do something here
+    
+    mlt_service_unlock(service);
+    return error;
+}
+
+```
+
+### mlt_consumer
+
+消费者是整个框架的发动机，主要公共方法如下：
+
+
+```C
+	int mlt_consumer_init( mlt_consumer this, void *child );
+	mlt_service mlt_consumer_service( mlt_consumer this );
+	mlt_properties mlt_consumer_properties( mlt_consumer this );
+	int mlt_consumer_connect( mlt_consumer this, mlt_service producer );
+	int mlt_consumer_start( mlt_consumer this );
+	mlt_frame mlt_consumer_get_frame( mlt_consumer this );
+	mlt_frame mlt_consumer_rt_frame( mlt_consumer this );
+	int mlt_consumer_stop( mlt_consumer this );
+	int mlt_consumer_is_stopped( mlt_consumer this );
+	void mlt_consumer_close( mlt_consumer );
+```
+
+包含一些状态控制，属性等方法，自己使用需要创建线程，在线程中获取frame，线程中的基本流程：
+
+```C
+static void *consumer_thread( void *arg )
+{
+	// Map the argument to the object
+	mlt_consumer this = arg;
+	// Get the properties
+	mlt_properties properties = MLT_CONSUMER_PROPERTIES( this );
+
+	// Convenience functionality
+	int terminate_on_pause = mlt_properties_get_int( properties, "terminate_on_pause" );
+	int terminated = 0;
+
+	// Frame and size
+	mlt_frame frame = NULL;
+
+	// Loop while running
+	while( !terminated && mlt_properties_get_int( properties, "running" ) )
+	{
+		// Get the frame
+		frame = mlt_consumer_rt_frame( this );
+		
+		// Check for termination
+		if ( terminate_on_pause && frame != NULL )
+			terminated = mlt_properties_get_double( MLT_FRAME_PROPERTIES( frame ), "_speed" ) == 0.0;
+
+		// Check that we have a frame to work with
+		if ( frame != NULL )
+		{
+			// Close the frame
+			mlt_events_fire( properties, "consumer-frame-show", frame, NULL );
+			mlt_frame_close( frame );
+		}
+	}
+
+	// Indicate that the consumer is stopped
+	mlt_properties_set_int( properties, "running", 0 );
+	mlt_consumer_stopped( this );
+
+	return NULL;
+}
+```
+
+在while循环中用mlt_consumer_rt_frame获取frame，就发动起了整个框架。
+
+
+
+### mlt_playlist
+
+mlt_playlist实际也是个mlt_producer,结构如下：
+
+```C
+struct mlt_playlist_s
+{
+	struct mlt_producer_s parent;
+	struct mlt_producer_s blank;
+
+	int size;
+	int count;
+	playlist_entry **list;
+};
+```
+playlist_entry是个mlt_playlist_clip_info的list，结构如下：
+
+```C
+typedef struct
+{
+	int clip;                 /**< the index of the clip within the playlist */
+	mlt_producer producer;    /**< the clip's producer (or parent producer of a cut) */
+	mlt_producer cut;         /**< the clips' cut producer */
+	mlt_position start;       /**< the time this begins relative to the beginning of the playlist */
+	char *resource;           /**< the file name or address of the clip */
+	mlt_position frame_in;    /**< the clip's in point */
+	mlt_position frame_out;   /**< the clip's out point */
+	mlt_position frame_count; /**< the duration of the clip */
+	mlt_position length;      /**< the unedited duration of the clip */
+	float fps;                /**< the frame rate of the clip */
+	int repeat;               /**< the number of times the clip is repeated */
+}
+mlt_playlist_clip_info;
+```
+
+clip一段也是一个生产者，符合前面讲的多个生产者组合成一个播放列表.
+
+### mlt_tractor
+
+轨道也是生产者的组合，但是组合方式不一样，多个轨道是并行，比如音频和图像轨。
+
+结构如下：
+```C
+struct mlt_tractor_s
+{
+	struct mlt_producer_s parent;
+	mlt_service producer;
+};
+```
+
+结构非常简单，多个轨进行叠加要使用mlt_field,mlt_field专门是为track添加过滤和混合的，添加方法：
+
+```C
+mlt_field_plant_filter(field, filter, 0);
+mlt_field_plant_transition(field, transition, 0, 1);
+```
+
+
+ 基础内容来自:
+<https://github.com/mltframework/mlt/blob/master/docs/framework.txt>
