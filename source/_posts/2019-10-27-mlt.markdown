@@ -178,9 +178,7 @@ properties对象-可以调用mlt_filter_properties方法，并且
 
 	    // Connect the consumer to filter
 	    mlt_consumer_connect( consumer, mlt_filter_service( filter ) );
-``` 
-
-
+```
 
 ### 混合转场
 
@@ -417,7 +415,7 @@ mlt_service_base;
 
 ### mlt_producer
 
-一个生产者拥有0个输入和一个输出。
+一个生产者拥有0个输入和1个输出。
 
 生产者提供了文件读取，管道，流或者图片及音频输入。
 

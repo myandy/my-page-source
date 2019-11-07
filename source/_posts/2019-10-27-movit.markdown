@@ -523,7 +523,7 @@ add_effect添加特效方法，finalize是生成glsl程序的方法，render_to_
 
 ### 其它
 
-fp16是16位和32为数据转换工具类，defs和version
+fp16是16位和32为数据转换工具类，defs和version就是一些通用定义。
 
 
 ## 处理流程
@@ -585,9 +585,11 @@ void EffectChain::finalize()
 ```
 
 先遍历每个节点，进行rewrite_graph，然后进行颜色空间等设置。关键步骤是
+
 ```C
     construct_phase(find_output_node(), &completed_effects)；
-```    
+```
+
 生成了phase结构。第一个参数是find_output_node，查找输出节点：
 
 ```C
@@ -614,7 +616,7 @@ Node *EffectChain::find_output_node()
 
 ### construct_phase
 
-从给定的效果和随后的链开始构建glsl程序。当需要纹理bound时，就会结束一个程序，还有需要多个效果，输出大小改变时也会结束程序。
+从给定的效果和随后的链开始构建glsl程序。当需要改变纹理bound时，就会结束一个程序，还有需要多个效果，输出大小改变时也会结束程序。
 在输出开始用一个简单的深度优先搜索，就不用在每个phase中明确的递归。
 
 主要逻辑代码，省略部分非主线流程：
