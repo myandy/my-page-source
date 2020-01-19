@@ -2,10 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="d8d7aa5e-77f9-4ba4-a70b-b4e65939b18e" name="Default" comment="">
-      <change afterPath="$PROJECT_DIR$/source/_posts/2019-11-2-Activity启动与StartingWindow.markdown" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/source/_posts/2019-11-10-Flutter与Android端的通信流程浅析.markdown" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/_posts/2019-10-27-mlt.markdown" beforeDir="false" afterPath="$PROJECT_DIR$/source/_posts/2019-10-27-mlt.markdown" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/_posts/2019-10-27-movit.markdown" beforeDir="false" afterPath="$PROJECT_DIR$/source/_posts/2019-10-27-movit.markdown" afterDir="false" />
     </list>
     <ignored path="Hexo.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -27,24 +25,6 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/source/_posts/2019-10-27-mlt.markdown">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="6720">
-              <caret line="448" column="18" selection-start-line="448" selection-end-line="448" selection-end-column="18" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/source/_posts/2019-10-26-opencv-安装.markdown">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="120">
-              <caret line="8" column="6" selection-start-line="8" selection-start-column="6" selection-end-line="8" selection-end-column="6" />
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/themes/next/_config.yml">
           <provider selected="true" editor-type-id="text-editor">
@@ -68,11 +48,32 @@
           <provider selected="true" editor-type-id="text-editor" />
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/source/_posts/2019-10-27-movit.markdown">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="212">
-              <caret line="622" selection-start-line="622" selection-end-line="622" />
+            <state relative-caret-position="9360">
+              <caret line="624" selection-start-line="624" selection-end-line="624" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/source/_posts/2019-11-10-Flutter与Android端的通信流程浅析.markdown">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-120">
+              <caret line="36" selection-start-line="36" selection-end-line="36" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/source/_posts/2019-11-2-Activity启动与StartingWindow.markdown">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="390">
+              <caret line="26" selection-start-line="26" selection-end-line="26" />
+              <folding>
+                <element signature="e#0#583#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -146,9 +147,6 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/source/_posts/2016-01-09-Android动画箭头.markdown" />
-        <option value="$PROJECT_DIR$/source/_posts/2016-01-11-思考死亡.markdown" />
-        <option value="$PROJECT_DIR$/source/_posts/2016-03-14-Android平移翻页.markdown" />
         <option value="$PROJECT_DIR$/source/_posts/2015-12-31-2015总结.markdown" />
         <option value="$PROJECT_DIR$/source/_posts/2016-10-13-VR视频播放简析.markdown" />
         <option value="$PROJECT_DIR$/source/_posts/Google VR Adroid版视频播放源码浅析.markdown" />
@@ -197,13 +195,16 @@
         <option value="$PROJECT_DIR$/source/_posts/2019-11-2-Activity启动与StartingWindow.markdown" />
         <option value="$PROJECT_DIR$/source/_posts/2019-10-27-mlt.markdown" />
         <option value="$PROJECT_DIR$/source/_posts/2019-10-27-movit.markdown" />
+        <option value="$PROJECT_DIR$/source/_posts/2019-11-10-Flutter与native调用流程.markdown" />
+        <option value="$PROJECT_DIR$/source/_posts/2019-11-10-Flutter与Android端的通信流程浅析.markdown" />
+        <option value="$PROJECT_DIR$/source/_posts/readme1.md" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds">
-    <option name="x" value="1987" />
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="1985" />
     <option name="y" value="52" />
-    <option name="width" value="1853" />
+    <option name="width" value="1855" />
     <option name="height" value="1028" />
   </component>
   <component name="ProjectLevelVcsManager">
@@ -214,6 +215,8 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="PackagesPane" />
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -242,8 +245,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="PackagesPane" />
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -421,10 +422,11 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="1987" y="52" width="1853" height="1028" extended-state="0" />
+    <frame x="1985" y="-4" width="1855" height="1084" extended-state="6" />
+    <editor active="true" />
     <layout>
       <window_info id="Build Variants" order="0" side_tool="true" />
-      <window_info active="true" content_ui="combo" id="Project" order="1" visible="true" weight="0.22518025" />
+      <window_info active="true" content_ui="combo" id="Project" order="1" visible="true" weight="0.24099723" />
       <window_info id="Structure" order="2" weight="0.25" />
       <window_info id="Captures" order="3" weight="0.25" />
       <window_info id="Designer" order="4" />
@@ -476,11 +478,10 @@
     <ignored-roots>
       <path value="$PROJECT_DIR$/.deploy_git" />
       <path value="$PROJECT_DIR$/themes/yelee" />
+      <path value="$PROJECT_DIR$/themes/next" />
     </ignored-roots>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/themes/yelee/source/background/backup/bg-1.jpg" />
-    <entry file="file://$PROJECT_DIR$/themes/yelee/package.json" />
     <entry file="file://$PROJECT_DIR$/themes/yelee/source/img/AcFun.png" />
     <entry file="file://$PROJECT_DIR$/themes/yelee/source/img/bilibili.png" />
     <entry file="file://$PROJECT_DIR$/themes/yelee/source/img/avatar.jpg" />
@@ -628,16 +629,6 @@
       <provider selected="true" editor-type-id="images" />
     </entry>
     <entry file="file://$PROJECT_DIR$/themes/_config1.yml" />
-    <entry file="file://$PROJECT_DIR$/source/_posts/2019-11-2-Activity启动与StartingWindow.markdown">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="744">
-          <caret line="1011" column="38" lean-forward="true" selection-start-line="1011" selection-start-column="38" selection-end-line="1011" selection-end-column="38" />
-          <folding>
-            <element signature="e#0#583#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/source/_posts/2019-10-27-mlt.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="6720">
@@ -669,6 +660,13 @@
     <entry file="file://$PROJECT_DIR$/public/2018/05/04/2018-5-4-相机源码深入解析(一)/index.html">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
+    <entry file="file://$PROJECT_DIR$/source/_posts/2019-10-27-movit.markdown">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="9360">
+          <caret line="624" selection-start-line="624" selection-end-line="624" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/source/CNAME">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="30">
@@ -690,10 +688,27 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/source/_posts/2019-10-27-movit.markdown">
+    <entry file="file://$PROJECT_DIR$/source/_posts/2019-11-2-Activity启动与StartingWindow.markdown">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="212">
-          <caret line="622" selection-start-line="622" selection-end-line="622" />
+        <state relative-caret-position="390">
+          <caret line="26" selection-start-line="26" selection-end-line="26" />
+          <folding>
+            <element signature="e#0#583#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/source/_posts/readme1.md">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="385">
+          <caret line="54" selection-start-line="54" selection-end-line="54" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/source/_posts/2019-11-10-Flutter与Android端的通信流程浅析.markdown">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-120">
+          <caret line="36" selection-start-line="36" selection-end-line="36" />
         </state>
       </provider>
     </entry>
