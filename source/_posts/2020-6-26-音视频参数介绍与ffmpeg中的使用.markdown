@@ -1,0 +1,259 @@
+---
+title:      "音视频参数介绍与ffmpeg中的使用"
+description:   "ffmpeg中如何创建流"
+date:       2020-06-26 14:00:00
+author:     "安地"
+tags:
+      - 音视频
+---
+
+##  格式介绍
+
+一个音视频文件整体在一个封装包里，比如我们熟悉的MP4，AVI,rmvb等等。
+封装的音视频文件下面会包含多个轨道，每个轨道对应一个流，这些音视频流都由原始数据编码而成，下面介绍下音视频编码的参数。
+
+
+### 视频
+
+1. 编码格式
+   目前的主流是h.264和h.265(hevc)，h264基本android硬解都支持，h265需分机型判断。判断是否支持也需要带宽高大小，不同机型的支持度不一样。android硬解从开始的非常不稳定到现在的主流，
+   但支持度相对于软解还是差些，所以很多播放器都提供手动或者自动的切换软解和硬解。
+   
+2. 帧率（frame_rate）
+   测量单位为每秒显示帧数(Frames per Second，简称：FPS），android手机刷新帧率为60，现在也有手机出到90帧甚至120帧。更高的帧率等于更高的流畅度,
+   但对硬件的要求也就越高，越高的帧率人眼的感知差别就越不明显了。
+   
+3. DTS和PTS
+   DTS(Decoding Time Stamp) : 即解码时间戳，是解码器进行解码时相对于SCR(系统参考时间)的时间戳。它主要标识读入内存的bit流在什么时候开始送入解码器中进行解码。
+   PTS(Presentation Time Stamp) : 即显示时间戳
+   如果没有B帧的话DTS和PTS是一致的，B帧解码依赖前后的帧。
+   
+4. 系统时基（time_base）
+   多少数字表示1S。视频的时间戳是基于系统时间的，所以需要一个时基。比如time_base为90000。通过时基转换可以得到真正时间。
+   时间戳（毫秒） =  PTS / time_base * 1000 。
+   视频长度time(秒) = st->duration / time_base 。
+
+5. 码率
+   每秒传输的数据量。这个和编码格式，帧率还有视频宽高相关。还和原始视频相关，信息量小的视频和信息量大的视频差异大，就比如公开课这种变化小的视频码率就比较小，动作电影码率就比较大。在手机端做视频录制需要根据视频宽高设置一个推荐值。
+
+### 音频
+
+
+1. 采样率（sample_rate）
+   每秒采集数据的次数,例如8K即一秒有8000次采样。音频时间戳直接以采样率为时基
+     
+2. 采样精度 dataBits
+   每次采集数据的位数，例如PCM_16，即一次采样用16位比特位(bit)存储
+
+3. 通道数 channel
+   存在几路音频，例如单通道，双通道等
+
+4. 比特率 bitrate
+   针对编码格式，表示压缩编码后每秒的音频数据量大小。
+   对于未压缩的音频格式，比特率就等于采样率值×采样精度值×声道数
+   
+
+## FFmpeg中音视频流参数定义与使用
+
+
+### 定义
+音视频流参数设置在AVCodecParameters结构体中，各种信息都在其中，且有详细解释。
+
+```C
+/**
+ * This struct describes the properties of an encoded stream.
+ *
+ * sizeof(AVCodecParameters) is not a part of the public ABI, this struct must
+ * be allocated with avcodec_parameters_alloc() and freed with
+ * avcodec_parameters_free().
+ */
+typedef struct AVCodecParameters {
+    /**
+     * General type of the encoded data.
+     */
+    enum AVMediaType codec_type;
+    /**
+     * Specific type of the encoded data (the codec used).
+     */
+    enum AVCodecID   codec_id;
+    /**
+     * Additional information about the codec (corresponds to the AVI FOURCC).
+     */
+    uint32_t         codec_tag;
+
+    /**
+     * Extra binary data needed for initializing the decoder, codec-dependent.
+     *
+     * Must be allocated with av_malloc() and will be freed by
+     * avcodec_parameters_free(). The allocated size of extradata must be at
+     * least extradata_size + AV_INPUT_BUFFER_PADDING_SIZE, with the padding
+     * bytes zeroed.
+     */
+    uint8_t *extradata;
+    /**
+     * Size of the extradata content in bytes.
+     */
+    int      extradata_size;
+
+    /**
+     * - video: the pixel format, the value corresponds to enum AVPixelFormat.
+     * - audio: the sample format, the value corresponds to enum AVSampleFormat.
+     */
+    int format;
+
+    /**
+     * The average bitrate of the encoded data (in bits per second).
+     */
+    int64_t bit_rate;
+
+    /**
+     * The number of bits per sample in the codedwords.
+     *
+     * This is basically the bitrate per sample. It is mandatory for a bunch of
+     * formats to actually decode them. It's the number of bits for one sample in
+     * the actual coded bitstream.
+     *
+     * This could be for example 4 for ADPCM
+     * For PCM formats this matches bits_per_raw_sample
+     * Can be 0
+     */
+    int bits_per_coded_sample;
+
+    /**
+     * This is the number of valid bits in each output sample. If the
+     * sample format has more bits, the least significant bits are additional
+     * padding bits, which are always 0. Use right shifts to reduce the sample
+     * to its actual size. For example, audio formats with 24 bit samples will
+     * have bits_per_raw_sample set to 24, and format set to AV_SAMPLE_FMT_S32.
+     * To get the original sample use "(int32_t)sample >> 8"."
+     *
+     * For ADPCM this might be 12 or 16 or similar
+     * Can be 0
+     */
+    int bits_per_raw_sample;
+
+    /**
+     * Codec-specific bitstream restrictions that the stream conforms to.
+     */
+    int profile;
+    int level;
+
+    /**
+     * Video only. The dimensions of the video frame in pixels.
+     */
+    int width;
+    int height;
+
+    /**
+     * Video only. The aspect ratio (width / height) which a single pixel
+     * should have when displayed.
+     *
+     * When the aspect ratio is unknown / undefined, the numerator should be
+     * set to 0 (the denominator may have any value).
+     */
+    AVRational sample_aspect_ratio;
+
+    /**
+     * Video only. The order of the fields in interlaced video.
+     */
+    enum AVFieldOrder                  field_order;
+
+    /**
+     * Video only. Additional colorspace characteristics.
+     */
+    enum AVColorRange                  color_range;
+    enum AVColorPrimaries              color_primaries;
+    enum AVColorTransferCharacteristic color_trc;
+    enum AVColorSpace                  color_space;
+    enum AVChromaLocation              chroma_location;
+
+    /**
+     * Video only. Number of delayed frames.
+     */
+    int video_delay;
+
+    /**
+     * Audio only. The channel layout bitmask. May be 0 if the channel layout is
+     * unknown or unspecified, otherwise the number of bits set must be equal to
+     * the channels field.
+     */
+    uint64_t channel_layout;
+    /**
+     * Audio only. The number of audio channels.
+     */
+    int      channels;
+    /**
+     * Audio only. The number of audio samples per second.
+     */
+    int      sample_rate;
+    /**
+     * Audio only. The number of bytes per coded audio frame, required by some
+     * formats.
+     *
+     * Corresponds to nBlockAlign in WAVEFORMATEX.
+     */
+    int      block_align;
+    /**
+     * Audio only. Audio frame size, if known. Required by some formats to be static.
+     */
+    int      frame_size;
+
+    /**
+     * Audio only. The amount of padding (in samples) inserted by the encoder at
+     * the beginning of the audio. I.e. this number of leading decoded samples
+     * must be discarded by the caller to get the original audio without leading
+     * padding.
+     */
+    int initial_padding;
+    /**
+     * Audio only. The amount of padding (in samples) appended by the encoder to
+     * the end of the audio. I.e. this number of decoded samples must be
+     * discarded by the caller from the end of the stream to get the original
+     * audio without any trailing padding.
+     */
+    int trailing_padding;
+    /**
+     * Audio only. Number of samples to skip after a discontinuity.
+     */
+    int seek_preroll;
+} AVCodecParameters;
+```
+### 使用
+
+需要新建的话用avformat_new_stream创建一个新的流，然后设置其codecpar参数就可，下面是我自定义格式的设置例子，可以根据实际需要具体设置。
+
+```C
+    //视频
+    AVStream *st;
+    st = avformat_new_stream(ic, NULL);
+    st->codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
+    st->codecpar->codec_id = AV_CODEC_ID_H264;
+    st->codecpar->format = AV_PIX_FMT_YUV420P;
+    st->codecpar->profile = FF_PROFILE_H264_HIGH;
+    st->r_frame_rate.num = 0;
+    st->r_frame_rate.den = 1;
+    st->codecpar->width = 640;
+    st->codecpar->height = 360;
+    AVRational fps = {30, 1};
+    st->avg_frame_rate = fps;
+    st->start_time = 0;
+
+    //音频
+    AVStream *audioST = avformat_new_stream(ic, NULL);
+    audioST->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
+    audioST->codecpar->codec_id = AV_CODEC_ID_PCM_ALAW;
+    audioST->codecpar->channels = channel;
+    audioST->codecpar->sample_rate = sampleRate;
+    audioST->codecpar->format = AV_SAMPLE_FMT_S16;
+ ```
+
+## 时间计算
+
+视频需要帧率计算时间，比如60fps，那这样每一帧的时间就是1000/60=16ms。
+
+音频的话就不需要帧的概念，直接根据参数就可以计算了。
+假设每帧原始数据有1024个采样点，dataBits为8bit即1byte，单通道。
+那在采样率为8000时，每帧时长（毫秒数） = 1024 / 8000 * 1000 = 128ms
+时间戳就是128的等差连续数列。
+每帧原始数据大小 =  1024 * 1 byte * 1 = 1024 byte。
+  
