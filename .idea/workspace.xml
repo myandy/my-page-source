@@ -2,8 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="d8d7aa5e-77f9-4ba4-a70b-b4e65939b18e" name="Default" comment="">
-      <change afterPath="$PROJECT_DIR$/source/_posts/2020-9-30-zxing二维码扫描性能体验完全优化攻略.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/source/_posts/2020-12-19-ijkPlayer深入探究(三).markdown" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/source/_posts/2020-12-21-NDK MediaCodec解码采坑.markdown" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/about/index.md" beforeDir="false" afterPath="$PROJECT_DIR$/source/about/index.md" afterDir="false" />
     </list>
     <ignored path="Hexo.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -26,11 +28,25 @@
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/source/_posts/2020-6-26-音视频参数介绍与ffmpeg中的使用.markdown">
+        <entry file="file://$PROJECT_DIR$/source/_posts/2020-9-30-zxing二维码扫描性能体验完全优化攻略.md">
           <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
             <state split_layout="SPLIT">
               <first_editor relative-caret-position="15">
-                <caret line="4" column="16" selection-start-line="4" selection-start-column="16" selection-end-line="4" selection-end-column="16" />
+                <caret line="36" column="6" selection-start-line="36" selection-start-column="6" selection-end-line="36" selection-end-column="6" />
+              </first_editor>
+              <second_editor>
+                <markdownNavigatorState />
+              </second_editor>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/source/about/index.md">
+          <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
+            <state split_layout="SPLIT">
+              <first_editor relative-caret-position="135">
+                <caret line="9" column="4" selection-start-line="9" selection-start-column="4" selection-end-line="9" selection-end-column="4" />
               </first_editor>
               <second_editor>
                 <markdownNavigatorState />
@@ -40,11 +56,11 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/source/_posts/2020-9-30-zxing二维码扫描性能体验完全优化攻略.md">
+        <entry file="file://$PROJECT_DIR$/source/_posts/2020-12-21-NDK MediaCodec解码采坑.markdown">
           <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
             <state split_layout="SPLIT">
-              <first_editor relative-caret-position="195">
-                <caret line="46" selection-start-line="46" selection-end-line="46" />
+              <first_editor relative-caret-position="170">
+                <caret line="26" column="3" lean-forward="true" selection-start-line="26" selection-start-column="3" selection-end-line="26" selection-end-column="3" />
               </first_editor>
               <second_editor>
                 <markdownNavigatorState />
@@ -54,22 +70,12 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/source/_posts/2018-5-5-相机源码深入解析(二).markdown">
+        <entry file="file://$PROJECT_DIR$/source/_posts/2020-6-25-ijkPlayer深入探究(二).markdown">
           <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
             <state split_layout="SPLIT">
-              <first_editor />
-              <second_editor>
-                <markdownNavigatorState />
-              </second_editor>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/source/_posts/2019-10-27-mlt.markdown">
-          <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
-            <state split_layout="SPLIT">
-              <first_editor />
+              <first_editor relative-caret-position="-3605">
+                <caret line="2" column="34" selection-start-line="2" selection-start-column="34" selection-end-line="2" selection-end-column="34" />
+              </first_editor>
               <second_editor>
                 <markdownNavigatorState />
               </second_editor>
@@ -190,7 +196,6 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/source/_posts/2019-1-8-基于FFmpeg的Android视频播放器.markdown" />
         <option value="$PROJECT_DIR$/source/_posts/2019-1-11-使用Clion编译MLT框架.markdown" />
         <option value="$PROJECT_DIR$/_config.yml" />
         <option value="$PROJECT_DIR$/source/_posts/2019-1-7-Ubuntu下编译FFmpeg到Android使用.markdown" />
@@ -199,7 +204,6 @@
         <option value="$PROJECT_DIR$/source/_posts/2019-1-29-python爬虫抓取instagram信息.markdown" />
         <option value="$PROJECT_DIR$/source/_posts/2019-2-1-自制ShaderToy相机.markdown" />
         <option value="$PROJECT_DIR$/source/_posts/2019-2-1-做了一个好玩的ShaderToy相机.markdown" />
-        <option value="$PROJECT_DIR$/source/about/index.md" />
         <option value="$PROJECT_DIR$/source/_posts/2019-2-2-.markdown" />
         <option value="$PROJECT_DIR$/source/_posts/2019-2-2-相册模块化方案和心得.markdown" />
         <option value="$PROJECT_DIR$/source/_posts/2019-4-19-xmstreaming.markdown" />
@@ -241,6 +245,8 @@
         <option value="$PROJECT_DIR$/source/_posts/2020-6-26-ffmpeg的音视频参数解析与时间计算.markdown" />
         <option value="$PROJECT_DIR$/source/_posts/2020-6-26-音视频参数介绍与ffmpeg中的使用.markdown" />
         <option value="$PROJECT_DIR$/source/_posts/2020-9-30-zxing二维码扫描性能体验完全优化攻略.md" />
+        <option value="$PROJECT_DIR$/source/about/index.md" />
+        <option value="$PROJECT_DIR$/source/_posts/2020-12-21-NDK MediaCodec解码采坑.markdown" />
       </list>
     </option>
   </component>
@@ -257,6 +263,8 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="PackagesPane" />
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -285,8 +293,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
-      <pane id="PackagesPane" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -300,18 +306,18 @@
     <property name="show.migrate.to.gradle.popup" value="false" />
   </component>
   <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/themes" />
-      <recent name="$PROJECT_DIR$/source/_posts" />
-      <recent name="C:\Hexo\source" />
-      <recent name="C:\Hexo\themes\yelee\source\img" />
-    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/source/_posts" />
       <recent name="$PROJECT_DIR$/themes/next" />
       <recent name="$PROJECT_DIR$/source/img" />
       <recent name="$PROJECT_DIR$/themes/yelee/source/img" />
       <recent name="C:\Hexo\source\_posts" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/themes" />
+      <recent name="$PROJECT_DIR$/source/_posts" />
+      <recent name="C:\Hexo\source" />
+      <recent name="C:\Hexo\themes\yelee\source\img" />
     </key>
   </component>
   <component name="RunDashboard">
@@ -465,6 +471,7 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="1234" height="777" extended-state="0" />
+    <editor active="true" />
     <layout>
       <window_info id="Build Variants" order="0" side_tool="true" />
       <window_info content_ui="combo" id="Project" order="1" visible="true" weight="0.3973619" />
@@ -485,7 +492,7 @@
       <window_info anchor="bottom" id="Cvs" order="5" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="6" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="7" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="8" visible="true" weight="0.33534744" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="8" visible="true" weight="0.19335347" />
       <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" weight="0.32900432" />
       <window_info anchor="bottom" id="Version Control" order="10" />
       <window_info anchor="bottom" id="Messages" order="11" weight="0.008639309" />
@@ -555,8 +562,6 @@
     </ignored-roots>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/source/_posts/Android中VR播放方式及实现分析.markdown" />
-    <entry file="file://$PROJECT_DIR$/source/_posts/opengl滤镜原理及实现.markdown" />
     <entry file="file://$PROJECT_DIR$/themes/yelee/.gitignore" />
     <entry file="file://$PROJECT_DIR$/themes/yelee/_config.yml" />
     <entry file="file://$PROJECT_DIR$/source/_posts/2015-07-30-知乎格子问题.markdown">
@@ -600,13 +605,6 @@
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/2019-1-11-使用Clion编译MLT框架.markdown" />
-    <entry file="file://$PROJECT_DIR$/source/about/index.md">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="135">
-          <caret line="9" column="12" selection-start-line="9" selection-start-column="12" selection-end-line="9" selection-end-column="12" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/source/_posts/2017-3-27-Android视频滤镜.markdown">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="330">
@@ -744,11 +742,11 @@
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/source/_posts/2020-6-25.markdown" />
-    <entry file="file://$PROJECT_DIR$/source/_posts/2020-6-25-ijkPlayer深入探究(二).markdown">
+    <entry file="file://$PROJECT_DIR$/source/_posts/2020-2-27-ijkPlayer深入探究(一).markdown">
       <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
         <state split_layout="SPLIT">
-          <first_editor relative-caret-position="30">
-            <caret line="2" column="34" selection-start-line="2" selection-start-column="34" selection-end-line="2" selection-end-column="34" />
+          <first_editor relative-caret-position="36">
+            <caret line="45" column="5" lean-forward="true" selection-start-line="45" selection-start-column="5" selection-end-line="45" selection-end-column="5" />
           </first_editor>
           <second_editor>
             <markdownNavigatorState />
@@ -756,12 +754,27 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/source/_posts/2020-2-27-ijkPlayer深入探究(一).markdown">
+    <entry file="file://$PROJECT_DIR$/source/_posts/2020-6-26-音视频参数介绍与ffmpeg中的使用.markdown">
       <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
         <state split_layout="SPLIT">
-          <first_editor relative-caret-position="36">
-            <caret line="45" column="5" lean-forward="true" selection-start-line="45" selection-start-column="5" selection-end-line="45" selection-end-column="5" />
+          <first_editor relative-caret-position="60">
+            <caret line="4" column="16" selection-start-line="4" selection-start-column="16" selection-end-line="4" selection-end-column="16" />
           </first_editor>
+          <second_editor>
+            <markdownNavigatorState />
+          </second_editor>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/source/_posts/2018-5-5-相机源码深入解析(二).markdown">
+      <provider editor-type-id="text-editor">
+        <state relative-caret-position="990">
+          <caret line="66" selection-start-line="66" selection-end-line="66" selection-end-column="3" />
+        </state>
+      </provider>
+      <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
+        <state split_layout="SPLIT">
+          <first_editor />
           <second_editor>
             <markdownNavigatorState />
           </second_editor>
@@ -867,11 +880,11 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/source/_posts/2020-6-26-音视频参数介绍与ffmpeg中的使用.markdown">
+    <entry file="file://$PROJECT_DIR$/source/_posts/2020-9-30-zxing二维码扫描性能体验完全优化攻略.md">
       <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
         <state split_layout="SPLIT">
           <first_editor relative-caret-position="15">
-            <caret line="4" column="16" selection-start-line="4" selection-start-column="16" selection-end-line="4" selection-end-column="16" />
+            <caret line="36" column="6" selection-start-line="36" selection-start-column="6" selection-end-line="36" selection-end-column="6" />
           </first_editor>
           <second_editor>
             <markdownNavigatorState />
@@ -879,12 +892,7 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/source/_posts/2018-5-5-相机源码深入解析(二).markdown">
-      <provider editor-type-id="text-editor">
-        <state relative-caret-position="990">
-          <caret line="66" selection-start-line="66" selection-end-line="66" selection-end-column="3" />
-        </state>
-      </provider>
+    <entry file="file://$PROJECT_DIR$/source/_posts/2020-12-19-ijkPlayer深入探究(三).markdown">
       <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
         <state split_layout="SPLIT">
           <first_editor />
@@ -894,11 +902,40 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/source/_posts/2020-9-30-zxing二维码扫描性能体验完全优化攻略.md">
+    <entry file="file://$PROJECT_DIR$/source/about/index.md">
+      <provider editor-type-id="text-editor">
+        <state relative-caret-position="135">
+          <caret line="9" column="12" selection-start-line="9" selection-start-column="12" selection-end-line="9" selection-end-column="12" />
+        </state>
+      </provider>
       <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
         <state split_layout="SPLIT">
-          <first_editor relative-caret-position="195">
-            <caret line="46" selection-start-line="46" selection-end-line="46" />
+          <first_editor relative-caret-position="135">
+            <caret line="9" column="4" selection-start-line="9" selection-start-column="4" selection-end-line="9" selection-end-column="4" />
+          </first_editor>
+          <second_editor>
+            <markdownNavigatorState />
+          </second_editor>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/source/_posts/2020-6-25-ijkPlayer深入探究(二).markdown">
+      <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
+        <state split_layout="SPLIT">
+          <first_editor relative-caret-position="-3605">
+            <caret line="2" column="34" selection-start-line="2" selection-start-column="34" selection-end-line="2" selection-end-column="34" />
+          </first_editor>
+          <second_editor>
+            <markdownNavigatorState />
+          </second_editor>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/source/_posts/2020-12-21-NDK MediaCodec解码采坑.markdown">
+      <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
+        <state split_layout="SPLIT">
+          <first_editor relative-caret-position="170">
+            <caret line="26" column="3" lean-forward="true" selection-start-line="26" selection-start-column="3" selection-end-line="26" selection-end-column="3" />
           </first_editor>
           <second_editor>
             <markdownNavigatorState />
