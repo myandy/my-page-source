@@ -1,0 +1,111 @@
+---
+title:      "一种万能hls协议解析方法"
+description:   "扩展concat协议解析hls视频"
+date:       2021-08-03 14:00:00
+author:     "安地"
+tags:
+      - 音视频
+
+---
+
+# HLS介绍
+
+
+## 基本介绍
+HLS，全称 HTTP Live Streaming，是苹果公司实现的基于 HTTP 的流媒体传输协议。HLS 的基本原理非常简单，它是将多媒体文件或直接流进行切片，形成一堆的 ts 文件和 m3u8 索引文件。
+
+播放器首先需要解析的是m3u8索引文件，一个m3u8文件如下：
+
+```
+#EXTM3U
+#EXT-X-VERSION:3         // 版本信息
+#EXT-X-TARGETDURATION:3 // 每个分片的目标时长
+#EXT-X-MEDIA-SEQUENCE:0  // 分片起始编号
+#EXTINF:3.0,       // 分片时长
+test000.ts               // 分片路径
+#EXT-X-DISCONTINUITY   //非连续标记
+#EXTINF:3.0,        // 分片时长
+test001.ts               // 分片路径
+```
+
+## fMP4 
+
+在EXT-X-VERSION 7支持了fmp4.
+fMP4 是基于 MPEG-4 Part 12 的流媒体格式,与 mp4 很相似，但也有一些区别,fMP4更好的适应流式播的需求.
+fmp4可以支持h.265,能够大大节省带宽，已经慢慢变成现在的视频主流，尤其是视频监控领域。
+
+## DASH
+
+DASH是可以自适应比特率的服务端，客户端流媒体解决方案。可以根据自由选择需要播放的媒体分片，可以实现adaptive bitrate streaming技术，不同画质内容无缝切换，提供更好的播放体验。
+exoplayer基础library就支持了DASH.
+
+
+#  问题
+
+hls格式是一种协议标准，服务端可能提供不同的视频，客户端的解析能力也不一样。ios11后对fmp4的支持就比较好，android8以后部分机型支持，但兼容性不够好，时间戳等有问题就会出现不能播放，但android上exoplayer支持兼容性很好。
+
+hls视频有些问题就会导致支持变差，尤其是视频源不可控的情况下，典型的会有时间戳不连续，视频大小变化，音视频编码格式变化等等。
+有些情况ios也可能无法支持，ios和android两端的体验也不一致。现在就需要一种办法统一播放，能够自定义解析hls格式支持，兼容特殊格式。
+
+# 方案与实现
+
+
+## 寻找方案
+
+视频格式解析最佳还是ffmpeg，播放器可以基于ijkplayer改造。
+ffmpeg原生的hls格式解析器兼容性很差，时间戳有问题就无法播放，更无法播放fmp4.
+hls实际就是个m3u8的索引文件，就是多个视频片段的组合，这个和concat协议很类似，那是不是可以用concat协议支持hls呢。
+concat是多个文件的拼接，天然支持DASH，对多个文件的不同性适配很好。那就尝试用这个方案了。
+
+## concat支持本地m3u8
+
+concat协议实例
+```
+ffconcat version 1.0
+# my first filename
+file /mnt/share/file-1.mp4
+duration 20.0
+# my second filename
+file '/mnt/share/file 2.mp4'
+```
+
+可以看到concat协议很简单，就包含文件长度和地址，这个和m3u8的完全一样。
+如果是m3u8的本地视频，那就可以直接完美支持，测试也很简单的通过了。
+
+
+## 加密支持
+
+我需要解析的hls包括#EXT-X-KEY:METHOD=AES-128
+这就需要增加AES-128的方法，这个从hls.c找相关代码，改写过来，还算轻松搞定了。
+
+## 遇到的坑
+
+
+1. fmp4+hevc视频大小变化花屏
+这个是必须加上hevc_mp4toannexb，原始协议只支持h264_mp4toannexb
+H.264/5码流分Annex-B和AVCC两种格式,
+AVCC以长度信息分割NALU，在mp4和flv等封装格式中使用。
+Annex-B以start code(0x000001或0x00000001)分割NALU，在mpegts流媒体文件中使用
+加上hevc_mp4toannexb后每一帧都能解析出视频宽高，这样不会有切换花屏问题。
+
+2. ts视频没有声音
+这样发现是因为probesize和analyzeduration设置过小，导致信息没有读取出现，这两个参数直接不设置即可，m3u8单片的数据量本来就小。
+
+3. 在线fmp4视频无法播放
+这个发现是http协议不支持range，支持range又会请求多次，这个解决方案在前一篇介绍了
+
+## 一些优化
+
+1. 多线程打开视频优化加载速度
+m3u8文件很长时，读取head的时间非常耗时，正常流程是读取完成后再打开第一个视频，可以优化成添加第一个视频时就去多线程读取，最后使用pthread_join去等待读取完成
+
+2. 首次打开视频时seek的速度优化
+concat协议默认会打开第一个视频，起播seek后又会打开新的视频，https的视频打开本来就很慢，这样起播就非常慢。
+解决方案是起播时就把start_seek_time传入，根据start_seek_time决定第一个打开的文件
+
+
+# 总结
+
+这个任务去年做了一段时间然后放弃，今年鼓起勇气终于完成了，碰到了很多奇怪的问题，一个是缺乏经验，一个是没有资料，一切都得从源码分析解决。
+解决一个问题最难的是确定原因，其实是寻找方案，编码解决问题是最简单的。这里分享方案思路，代码就不重要了。
+
