@@ -1,0 +1,159 @@
+---
+title:      "超大像素的OpenGL处理"
+description:   "OpenGL如何突破设备限制对超大bitmap处理"
+date:       2021-12-06 14:00:00
+author:     "安地"
+tags:
+      - 音视频
+      - OpenGL
+
+---
+
+# 背景
+
+OpenGL各个机型上有最大分辨率限制,因为屏幕大小一般也就1k或者2k.这个限制比较老的手机是2048,新的有4096,8192甚至16384的.
+如果只是做屏幕渲染不会有超出这个大小的情况,但如果要做离屏渲染就有可能超过这个大小了.
+比如我们的目标是处理一亿像素的原图,比如小米10相机拍的108M照片,其分辨率是12032*9024,那很多手机上OpenGL已经无法处理了,这时候怎么办呢?
+
+# 正文
+
+这时候直接全图加载进OpenGL已经不可能，那是不是可以部分加载，部分处理再合成呢？
+输入是图片，加载出来是bitmap，在java层做的话需要分割出多个小的bitmap，处理完成后合成一个大的bitmap，理论上可行，但这里的分块和合成太消耗资源了，这里可以放到c层做，
+ 利用指针的特性节省掉分块和合成的时间.
+## 处理流程
+
+### 获取OpenGL最大处理长度
+
+这个问题从stackoverflow上可以获取到答案,有两种方法,第一种直接获取GL_MAX_TEXTURE_SIZE
+
+```
+int[] maxTextureSize = new int[1];
+GLES20.glGetIntegerv(GLES20.GL_MAX_TEXTURE_SIZE, maxTextureSize, 0);
+```
+
+第二种是通过EGL的配置来获取EGL_MAX_PBUFFER_WIDTH,默认值为2048.
+
+```java
+   public static int getMaxTextureSize() {
+        final int IMAGE_MAX_BITMAP_DIMENSION = 2048;
+        EGL10 egl = (EGL10) EGLContext.getEGL();
+        EGLDisplay display = egl.eglGetDisplay(EGL10.EGL_DEFAULT_DISPLAY);
+        int[] version = new int[2];
+        egl.eglInitialize(display, version);
+        int[] totalConfigurations = new int[1];
+        egl.eglGetConfigs(display, null, 0, totalConfigurations);
+        EGLConfig[] configurationsList = new EGLConfig[totalConfigurations[0]];
+        egl.eglGetConfigs(display, configurationsList, totalConfigurations[0], totalConfigurations);
+        int[] textureSize = new int[1];
+        int maximumTextureSize = 0;
+        for (int i = 0; i < totalConfigurations[0]; i++) {
+            egl.eglGetConfigAttrib(display, configurationsList[i], EGL10.EGL_MAX_PBUFFER_WIDTH, textureSize);
+            if (maximumTextureSize < textureSize[0])
+                maximumTextureSize = textureSize[0];
+        }
+        egl.eglTerminate(display);
+        return Math.max(maximumTextureSize, IMAGE_MAX_BITMAP_DIMENSION);
+    }
+```
+
+第一种方法获取到的最大大小可能与最大纹理无关,所以应该用第二种.
+
+### 分块
+
+读取到bitmap后,可以根据宽高进行分块,分成width/maxTextureSize向上取整块,比如12032就可以分成2048*5+1795.
+这里不用实际切割bitmap,保留每块的位置待用即可.
+
+### 读取bitmap指针
+
+通过AndroidBitmap_lockPixels就可以获取bitmap对应的指针pixels
+
+```c
+    if ((ret = AndroidBitmap_lockPixels(env, bitmap, (void **) &pixelscolor)) < 0) {
+        //锁定AndroidBitmap_lockPixels
+        //锁定之后，pixelscolor指向图片的首地址
+        return false;
+    }
+    pixels = (unsigned char *) pixelscolor;
+```
+### 读取纹理
+
+java层读取纹理只能读取整个bitmap的,c层可以根据指针更加灵活,只需要更改宽度的对齐就可以.
+stride是原始图片的宽度,按照这个大小进行对其.w,h的想要读取分块的宽高,
+offset是当前分块的首像素相对原始图像的偏移,记得要看图像格式,如果是RGBA,就是位置偏移再乘以4
+
+```C
+JNIEXPORT void JNICALL
+Java_com_anddymao_block_BlockSdkUtils_updateTextureWidthStride(JNIEnv *env,
+                                                                             jclass type,
+                                                                             jint tex, jint w,
+                                                                             jint h,
+                                                                             jint stride,
+                                                                             jint offset) {
+
+    byte *buffer = pixels;
+    if (stride != w) {
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, stride);
+    }
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer + offset);
+    if (stride != w) {
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    }
+}
+```
+读取到纹理后就可以对这块纹理进行滤镜操作了,操作完再写入原始图片数据中.
+
+### 读OpenGL数据并写入
+
+在java层执行完滤镜操作读取得到数据再传入native层更新是可以的,但这样效率会低一点.
+我们直接在C层readPixel.同样需要指定宽度的对齐,也是原始图片的宽度.然后找到指针对应位置,执行glReadPixels,数据就自动更新到对应位置了.
+
+
+```C
+JNIEXPORT void JNICALL
+Java_com_anddymao_block_BlockSdkUtils_readPixelsAndMerge(JNIEnv *env, jclass type,
+                                                                       jint x, jint y,
+                                                                       jint w, jint h, jint stride,
+                                                                       jint offset) {
+
+    if (stride != w) {
+        glPixelStorei(GL_PACK_ROW_LENGTH, stride);
+    }
+    byte *buffer = pixels + offset;
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(x, y, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+    if (stride != w) {
+        glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+    }
+}
+```
+
+### 解锁bitmap
+
+用AndroidBitmap_unlockPixels(env, bitmap)解锁bitmap,指针就会废弃掉,bitmap就能可用了,这个bitmap就是最后的输出bitmap.
+
+## 执行效率总结
+
+即使OpengGL能够负担大size的处理,分块处理也会比直接处理快很多,通过这种办法可以进行加速处理.从始至终只需要一个bitmap,内存的消耗也是最低的.
+
+## 特殊的处理问题
+
+### 位置相关问题
+如果OpenGL处理只和颜色相关,就可以用这种方案直接处理.如果和位置相关,分开后再处理片段着色器位置已改变,就处理不了了,或者自己根据位置的改变传入对应的参数,这样就是麻烦很多.
+我们在这种情况下也做了支持.
+
+### 周边色块相关问题
+
+如果片段着色器的处理和周边色块相关,比如高斯模糊,马赛克,这种可以每块读取时都往周边扩展一点,最后写入还是按照原始大小.
+这种情况下做了支持,效果也是没问题的.
+
+如果不是强烈需要原始超大图,编辑后用一般大小的图片就可以,但系统应用的支持却是没办法,必须做支持.
+
+# 总结
+分享了一下之前做这个需求的思路,欢迎共同探讨.
+
+
+
+
+
+

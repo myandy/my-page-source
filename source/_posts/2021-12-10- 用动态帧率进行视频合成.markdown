@@ -1,0 +1,124 @@
+---
+title:      "用动态帧率进行视频合成"
+description:   "如何实现用动态帧率进行编码MP4"
+date:       2021-12-10 14:00:00
+author:     "安地"
+tags:
+      - 音视频
+
+---
+
+# 背景
+
+前面介绍过一点音视频参数,也讲到时基.没有看的可以再回看一下.
+我们现在的问题是有视频流和音频流,但流不是很稳定,如何生成一个稳定的视频.
+由于生成视频前我们并不知道帧率多少,所以只能用动态帧率,如何去做合成呢?
+
+# 正文
+
+我们目前已经有了编码好的流,所以只需要封装即可,推荐用ffmpeg进行封装,适配性强.
+
+## ffmpeg封装方法
+
+一般用得多的是封装mp4,需要这几个步骤：
+1. 首先需要创建ffmpeg相关数据结构
+2. 创建文件写入流
+3. 写入头
+4. 逐帧写入数据
+5. 关闭流
+
+### 创建ffmpeg数据结构
+
+这一步创建主要是创建format参数和音视频数据流的参数,具体参数需要按功能需求自己设置.
+```
+    handle->_format_context = avformat_alloc_context();
+    if (handle->_format_context == NULL) {
+        LOGE("create_file avformat_alloc_context error");
+        return -1;
+    }
+    handle->_fps = vfps;
+    handle->_videoCode = videoCode;
+    handle->_format_context->oformat = av_guess_format("mp4", path, NULL);
+    if (handle->_format_context->oformat == NULL) {
+        LOGE("create_file av_guess_format error path = %s", path);
+        goto error;
+    }
+    if (videoCode == video_codec_id_h264) {
+        handle->_format_context->oformat->video_codec = AV_CODEC_ID_H264;
+    } else {
+        handle->_format_context->oformat->video_codec = AV_CODEC_ID_H265;
+    }
+    handle->_format_context->oformat->audio_codec = AV_CODEC_ID_AAC;
+    memcpy(handle->_format_context->filename, path, strlen(path));
+    handle->_video_stream = avformat_new_stream(handle->_format_context, NULL);
+    if (handle->_video_stream == NULL) {
+        LOGE("create_file avformat_new_stream video error");
+        goto error;
+    }
+    handle->_video_stream->id = handle->_format_context->nb_streams - 1;
+    handle->_video_stream->codec->codec_type = AVMEDIA_TYPE_VIDEO;
+    if (videoCode == video_codec_id_h264) {
+        handle->_video_stream->codec->codec_id = AV_CODEC_ID_H264;
+        handle->_video_stream->codec->level = 0x7F;
+    } else {
+        handle->_video_stream->codec->codec_id = AV_CODEC_ID_H265;
+    }
+    handle->_video_stream->codec->width = vwidth;
+    handle->_video_stream->codec->height = vheight;
+    handle->_video_stream->time_base.num = 1;
+    handle->_video_stream->time_base.den = 90000;
+    handle->_audio_stream = avformat_new_stream(handle->_format_context, NULL);
+    if (handle->_audio_stream == NULL) {
+        LOGE("create_file avformat_new_stream audio error");
+        goto error;
+    }
+    handle->_audio_stream->id = handle->_format_context->nb_streams - 1;
+    handle->_audio_stream->codec->codec_type = AVMEDIA_TYPE_AUDIO;
+    handle->_audio_stream->codec->codec_id = AV_CODEC_ID_AAC;
+    handle->_audio_stream->codec->sample_rate = asamplerate;
+```
+### 创建文件写入流
+
+这一步用avio_open打开文件开启write,会创建新文件
+```
+      ret = avio_open(&handle->_format_context->pb, path, AVIO_FLAG_WRITE);
+      if (ret < 0) {
+        LOGE("reate_file avio_open error = %d", ret);
+        goto error;
+      }
+```
+
+### 写入头
+
+写入头信息,这一步有时候会在首帧之后做,因为h264的首帧会带sps和pps信息在_video_extradata中,需要在首帧中解析出_video_extradata写入_format_context中
+```
+       handle->_video_stream->codec->extradata = handle->_video_extradata;
+       handle->_video_stream->codec->extradata_size = handle->_video_extradata_size;
+       ret = avformat_write_header(handle->_format_context, NULL);
+       ret = avformat_write_header(handle->_format_context, NULL);
+```
+
+### 逐帧写入数据
+
+这一步就是写入AVPacket数据,要掌握这个数据结构,写入flags,pts,dts,stream_index几个参数就可以
+```
+      av_interleaved_write_frame(handle->_format_context, &pkt);
+```
+
+### 关闭流
+
+调用av_write_trailer关闭mp4写入,再清空数据结构即可
+```
+      av_write_trailer(handle->_format_context);
+      avformat_free_context(handle->_format_context);
+```
+
+## 动态帧率
+
+实现动态帧率的话很简单,关键是AVPacket的pts参数,帧的间隔可以大可以小,最后整个视频会计算出一个正确的帧率.
+注意的是音频不能做动态,因为音频是连续的,每一帧是固定时长的,很多播放器并不会读取音频的时间戳而是去根据每帧长度去得到当前的帧的时间.
+所以音视频对齐都是视频对齐音频.
+
+如果是固定帧率的话就不需要写入pts参数,但要写入sample_rate参数.这样就帧间隔一致了.
+
+
